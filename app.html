@@ -493,55 +493,49 @@ let prices = { gold: null, btc: null };
   await Promise.all([loadRecords(), fetchPrices()]);
 })();
 
-// ===== GOLD PROXY URL =====
-// 🔧 ใส่ URL จาก Google Apps Script ที่ Deploy แล้ว
-const GOLD_PROXY_URL = 'https://script.google.com/macros/s/AKfycbzHz2yncnH65IJtrNUPbZ6ZJUBwOhe7AJwwzJAYP-nP6N1pGupE2xbSPwGJiXOYJI6DUg/exec';
-
 // ===== FETCH PRICES =====
+// สูตร TradingView: TVC:GOLD / 31.1034 * 15.244 * 0.965 * OANDA:USDTHB
 async function fetchPrices() {
   try {
-    // BTC — CoinGecko (ฟรี ไม่ต้อง key)
-    const btcRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=thb,usd&include_24hr_change=true');
-    const btcData = await btcRes.json();
-    prices.btc = {
-      thb: btcData.bitcoin.thb,
-      usd: btcData.bitcoin.usd,
-      change: btcData.bitcoin.thb_24h_change?.toFixed(2)
-    };
-  } catch(e) { console.warn('BTC price failed', e); }
+    // ดึง XAU/USD (ทองโลก), BTC/THB, BTC/USD และ USD/THB พร้อมกัน
+    const [cryptoRes, fxRes] = await Promise.all([
+      fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,gold&vs_currencies=thb,usd&include_24hr_change=true'),
+      fetch('https://api.frankfurter.app/latest?from=USD&to=THB')
+    ]);
+    const cryptoData = await cryptoRes.json();
+    const fxData     = await fxRes.json();
 
-  try {
-    // GOLD — goldtraders.or.th ผ่าน GAS Proxy
-    if (GOLD_PROXY_URL && GOLD_PROXY_URL !== 'YOUR_GAS_PROXY_URL') {
-      const goldRes = await fetch(GOLD_PROXY_URL);
-      const goldData = await goldRes.json();
-      if (goldData.success && goldData.gold_bar) {
-        prices.gold = {
-          buy_baht:      goldData.gold_bar.buy_baht,      // บาทไทย/บาททอง (รับซื้อ)
-          sell_baht:     goldData.gold_bar.sell_baht,     // บาทไทย/บาททอง (ขายออก)
-          buy_per_gram:  goldData.gold_bar.buy_per_gram,  // บาทไทย/กรัม (รับซื้อ)
-          sell_per_gram: goldData.gold_bar.sell_per_gram, // บาทไทย/กรัม (ขายออก)
-          thb: goldData.gold_bar.sell_per_gram,           // ใช้ราคาขายออก/กรัม เพื่อคำนวณมูลค่า
-          source: 'goldtraders.or.th'
-        };
-      }
-    } else {
-      // Fallback: PAXG จาก CoinGecko ถ้ายังไม่ได้ตั้ง GAS Proxy
-      const goldRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=thb&include_24hr_change=true');
-      const goldData = await goldRes.json();
-      if (goldData['pax-gold']?.thb) {
-        const perGram = Math.round(goldData['pax-gold'].thb / 31.1035);
-        prices.gold = {
-          thb: perGram,
-          sell_per_gram: perGram,
-          buy_per_gram: perGram,
-          sell_baht: Math.round(perGram * 15.244),
-          buy_baht: Math.round(perGram * 15.244),
-          source: 'PAXG (ประมาณ)'
-        };
-      }
+    // BTC
+    prices.btc = {
+      thb:    cryptoData.bitcoin?.thb,
+      usd:    cryptoData.bitcoin?.usd,
+      change: cryptoData.bitcoin?.thb_24h_change?.toFixed(2)
+    };
+
+    // GOLD — สูตร TradingView: XAU(USD/oz) / 31.1034 * 15.244 * 0.965 * USDTHB
+    const xauUsd = cryptoData.gold?.usd;
+    const usdThb = fxData?.rates?.THB;
+
+    if (xauUsd && usdThb) {
+      const perGram    = xauUsd / 31.1034 * usdThb;          // THB/กรัม
+      const sellBaht   = perGram * 15.244 * 0.965;            // ราคาขายออก (บาทไทย/บาททอง 96.5%)
+      const buyBaht    = sellBaht - 200;                       // spread ~200 บาท (ใกล้เคียงตลาดจริง)
+      const buyPerGram = perGram * 0.965 - (200 / 15.244);
+
+      prices.gold = {
+        sell_per_gram: Math.round(perGram),
+        buy_per_gram:  Math.round(buyPerGram),
+        sell_baht:     Math.round(sellBaht),
+        buy_baht:      Math.round(buyBaht),
+        thb:           Math.round(perGram),
+        xau_usd:       xauUsd.toLocaleString(),
+        usd_thb:       usdThb.toFixed(2),
+        source:        `XAU $${Math.round(xauUsd).toLocaleString()} · USD/THB ${usdThb.toFixed(2)}`
+      };
     }
-  } catch(e) { console.warn('Gold price failed', e); }
+  } catch(e) {
+    console.warn('Price fetch error', e);
+  }
 
   renderTicker();
   renderRecords();
@@ -552,16 +546,15 @@ function renderTicker() {
   const html = [];
 
   if (prices.gold) {
-    const src = prices.gold.source || '';
     html.push(`<div class="ticker-item" style="flex-direction:column;align-items:flex-start;gap:2px;">
       <div style="display:flex;align-items:center;gap:8px;">
         <span class="ticker-badge badge-gold">🥇 GOLD แท่ง 96.5%</span>
-        <span style="font-size:10px;color:var(--text-dim)">${src}</span>
+        <span style="font-size:10px;color:var(--text-dim)">${prices.gold.source}</span>
       </div>
-      <div style="display:flex;gap:16px;margin-top:2px;">
-        <span style="font-size:11px;color:var(--text-muted)">รับซื้อ: <span class="ticker-val" style="font-size:13px;color:var(--error)">${prices.gold.buy_baht?.toLocaleString() || '—'} ฿/บาท</span></span>
-        <span style="font-size:11px;color:var(--text-muted)">ขายออก: <span class="ticker-val" style="font-size:13px;color:var(--success)">${prices.gold.sell_baht?.toLocaleString() || '—'} ฿/บาท</span></span>
-        <span style="font-size:11px;color:var(--text-muted)">≈ <span class="ticker-val" style="font-size:12px;color:var(--gold)">${prices.gold.sell_per_gram?.toLocaleString() || '—'} ฿/กรัม</span></span>
+      <div style="display:flex;gap:16px;margin-top:2px;flex-wrap:wrap;">
+        <span style="font-size:11px;color:var(--text-muted)">รับซื้อ: <span class="ticker-val" style="font-size:13px;color:var(--error)">${prices.gold.buy_baht?.toLocaleString()} ฿/บาท</span></span>
+        <span style="font-size:11px;color:var(--text-muted)">ขายออก: <span class="ticker-val" style="font-size:13px;color:var(--success)">${prices.gold.sell_baht?.toLocaleString()} ฿/บาท</span></span>
+        <span style="font-size:11px;color:var(--text-muted)">≈ <span class="ticker-val" style="font-size:12px;color:var(--gold)">${prices.gold.sell_per_gram?.toLocaleString()} ฿/กรัม</span></span>
       </div>
     </div>`);
   }
