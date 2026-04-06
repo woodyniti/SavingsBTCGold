@@ -430,13 +430,72 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
         </div>
       </div>
 
-      <!-- USDT → THB converter -->
+      <!-- USDT → THB converter with manual rate input -->
       <div id="usdtConvertRow" style="display:none;margin-bottom:14px;">
-        <div style="background:var(--gold-bg);border:1.5px solid var(--gold-border);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;display:flex;justify-content:space-between;align-items:center;">
-          <span style="color:var(--text-muted)">≈ เทียบเท่า</span>
-          <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--gold);" id="usdtToThb">— บาท</span>
+        <div style="background:var(--gold-bg);border:1.5px solid var(--gold-border);border-radius:var(--radius-sm);padding:14px 16px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+            <span style="font-size:13px;color:var(--text-muted);white-space:nowrap;">อัตรา USD/THB</span>
+            <input type="number" id="usdtRate" placeholder="เช่น 34.50"
+              min="1" step="0.01" oninput="calcPreview()"
+              style="flex:1;padding:9px 12px;border:1.5px solid var(--gold-border);border-radius:8px;
+              font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;
+              background:#fff;color:var(--gold);outline:none;text-align:right;">
+            <span style="font-size:13px;color:var(--text-muted);white-space:nowrap;">฿/USD</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <span style="font-size:12px;color:var(--text-dim);">≈ เทียบเท่า</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:16px;color:var(--gold);" id="usdtToThb">— บาท</span>
+          </div>
+          <!-- Rate source buttons -->
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+            <span style="font-size:11px;color:var(--text-dim);margin-right:2px;">ดูอัตราจาก:</span>
+            <button type="button" onclick="openRatePopup('bot')"
+              style="padding:5px 10px;border-radius:6px;border:1.5px solid #1a56db;background:#EFF6FF;
+              color:#1a56db;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
+              🏦 ธปท. (BOT)
+            </button>
+            <button type="button" onclick="openRatePopup('google')"
+              style="padding:5px 10px;border-radius:6px;border:1.5px solid var(--border-strong);background:var(--surface);
+              color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
+              🔍 Google
+            </button>
+            <button type="button" onclick="openRatePopup('xe')"
+              style="padding:5px 10px;border-radius:6px;border:1.5px solid var(--border-strong);background:var(--surface);
+              color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
+              💱 XE.com
+            </button>
+            <span id="rateAutoHint" style="font-size:11px;color:var(--success);"></span>
+          </div>
         </div>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:5px;">อัตรา USD/THB: <span id="rateDisplay">—</span> · ระบบบันทึกเป็นบาทอัตโนมัติ</div>
+      </div>
+
+      <!-- BOT Rate Popup Modal -->
+      <div id="ratePopupOverlay" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;">
+        <div style="background:#fff;border-radius:16px;width:100%;max-width:700px;height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.2);">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1.5px solid var(--border);flex-shrink:0;">
+            <div>
+              <div style="font-size:16px;font-weight:700;color:var(--text);" id="ratePopupTitle">อัตราแลกเปลี่ยน</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">กรอกอัตราที่ต้องการใช้ แล้วกด "ใช้อัตรานี้"</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div style="display:flex;align-items:center;gap:6px;background:var(--gold-bg);border:1.5px solid var(--gold-border);border-radius:8px;padding:6px 10px;">
+                <span style="font-size:12px;color:var(--text-muted);">USD/THB:</span>
+                <input type="number" id="ratePopupInput" placeholder="34.50" min="1" step="0.01"
+                  style="width:80px;border:none;background:transparent;font-family:'IBM Plex Mono',monospace;
+                  font-size:15px;font-weight:700;color:var(--gold);outline:none;text-align:right;">
+              </div>
+              <button onclick="applyRateFromPopup()"
+                style="padding:8px 16px;background:var(--gold);border:none;border-radius:8px;
+                color:#fff;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                ใช้อัตรานี้ ✓
+              </button>
+              <button onclick="closeRatePopup()"
+                style="padding:8px 10px;background:var(--surface2);border:1.5px solid var(--border);
+                border-radius:8px;color:var(--text-muted);font-size:14px;cursor:pointer;">✕</button>
+            </div>
+          </div>
+          <iframe id="ratePopupFrame" src="" style="flex:1;border:none;width:100%;"></iframe>
+        </div>
       </div>
 
       <div class="form-row">
@@ -854,6 +913,9 @@ function clearForm() {
   document.getElementById('currency').value = 'THB';
   document.getElementById('currencyLabel').textContent = 'บาท';
   document.getElementById('usdtConvertRow').style.display = 'none';
+  const rateInput = document.getElementById('usdtRate');
+  if (rateInput) rateInput.value = '';
+  if (document.getElementById('rateAutoHint')) document.getElementById('rateAutoHint').textContent = '';
   selectAsset('GOLD', document.getElementById('optGold'));
   document.getElementById('pricePreview').classList.remove('show');
   _qtyManual = false;
@@ -889,31 +951,48 @@ function onCurrencyChange() {
   const isUSDT = cur === 'USDT';
   document.getElementById('currencyLabel').textContent = isUSDT ? 'USDT' : 'บาท';
   document.getElementById('usdtConvertRow').style.display = isUSDT ? 'block' : 'none';
-  updateRateDisplay();
+  if (isUSDT) {
+    // Auto-fill rate จาก API ถ้ามี แต่ยังให้แก้ได้
+    const rateInput = document.getElementById('usdtRate');
+    if (!rateInput.value && prices.usdThb) {
+      rateInput.value = prices.usdThb.toFixed(4);
+      document.getElementById('rateAutoHint').textContent = '(ดึงอัตโนมัติ — แก้ไขได้)';
+    }
+  }
   calcPreview();
 }
 
 function updateRateDisplay() {
-  const rate = prices.usdThb;
-  if (rate) {
-    document.getElementById('rateDisplay').textContent = rate.toFixed(2) + ' บาท/USD';
-  } else {
-    document.getElementById('rateDisplay').textContent = 'กำลังโหลด...';
+  // ถ้า modal เปิดและเลือก USDT อยู่ → auto-fill rate ถ้ายังว่าง
+  const rateInput = document.getElementById('usdtRate');
+  if (!rateInput) return;
+  if (!rateInput.value && prices.usdThb) {
+    rateInput.value = prices.usdThb.toFixed(4);
+    document.getElementById('rateAutoHint').textContent = '(ดึงอัตโนมัติ — แก้ไขได้)';
+    calcPreview();
   }
+}
+
+function getUsdtRate() {
+  // ใช้ rate จาก input ก่อน fallback ไป prices.usdThb
+  const manualRate = parseFloat(document.getElementById('usdtRate')?.value) || 0;
+  return manualRate > 0 ? manualRate : (prices.usdThb || 0);
 }
 
 function getAmountInThb() {
   const raw = parseFloat(document.getElementById('amountPaid').value) || 0;
   const cur = document.getElementById('currency').value;
   if (cur === 'USDT') {
-    const rate = prices.usdThb || 0;
+    const rate = getUsdtRate();
     const thb  = raw * rate;
     const el   = document.getElementById('usdtToThb');
     if (el) {
       if (rate === 0) {
-        el.textContent = 'กำลังโหลดอัตราแลกเปลี่ยน...';
+        el.textContent = 'กรุณากรอกอัตราแลกเปลี่ยน';
+        el.style.color = 'var(--error)';
       } else {
         el.textContent = thb.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท';
+        el.style.color = 'var(--gold)';
       }
     }
     return thb;
@@ -965,15 +1044,14 @@ async function saveRecord() {
 
   if (!paidRaw || paidRaw <= 0) return showToast('กรุณากรอกจำนวนเงิน', 'error');
 
-  // ตรวจสอบ rate ก่อน save
-  if (currency === 'USDT' && !prices.usdThb) {
-    showToast('⏳ กำลังโหลดอัตราแลกเปลี่ยน กรุณารอสักครู่...', 'error');
-    await fetchPrices();
-    if (!prices.usdThb) return showToast('ไม่สามารถดึงอัตราแลกเปลี่ยนได้ กรุณาลองใหม่', 'error');
+  // ตรวจสอบ rate USDT
+  if (currency === 'USDT') {
+    const rate = getUsdtRate();
+    if (!rate || rate <= 0) return showToast('กรุณากรอกอัตราแลกเปลี่ยน USD/THB', 'error');
   }
 
   const paid = getAmountInThb();
-  if (currency === 'USDT' && paid <= 0) return showToast('อัตราแลกเปลี่ยนผิดพลาด กรุณาลองใหม่', 'error');
+  if (currency === 'USDT' && paid <= 0) return showToast('กรุณากรอกอัตราแลกเปลี่ยนให้ถูกต้อง', 'error');
 
   const btn = document.getElementById('saveBtn');
   btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
@@ -990,7 +1068,7 @@ async function saveRecord() {
     platform: document.getElementById('platform').value || null,
     pay_method: document.getElementById('payMethod').value || null,
     notes: (currency === 'USDT'
-      ? `[จ่าย ${paidRaw} USDT @ ${prices.usdThb?.toFixed(4)} ฿ = ${Math.round(paid).toLocaleString()} ฿] `
+      ? `[จ่าย ${paidRaw} USDT @ ${getUsdtRate().toFixed(4)} ฿ = ${Math.round(paid).toLocaleString()} ฿] `
       : '') + (document.getElementById('notes').value || '') || null,
     slip_image: slipBase64 || null,
     updated_at: new Date().toISOString()
@@ -1011,6 +1089,88 @@ async function saveRecord() {
   closeModal();
   await loadRecords();
 }
+
+// ===== RATE POPUP =====
+const RATE_SOURCES = {
+  bot:    { title:'🏦 ธนาคารแห่งประเทศไทย (BOT)', url:'https://www.bot.or.th/en/statistics/exchange-rate.html' },
+  google: { title:'🔍 Google — USD/THB', url:'https://www.google.com/search?q=1+usd+to+thb&igu=1' },
+  xe:     { title:'💱 XE Currency Converter', url:'https://www.xe.com/currencyconverter/convert/?Amount=1&From=USD&To=THB' }
+};
+
+function openRatePopup(source) {
+  const src = RATE_SOURCES[source];
+  document.getElementById('ratePopupTitle').textContent = src.title;
+  // sync current rate to popup input
+  const cur = document.getElementById('usdtRate').value;
+  if (cur) document.getElementById('ratePopupInput').value = cur;
+  else if (prices.usdThb) document.getElementById('ratePopupInput').value = prices.usdThb.toFixed(4);
+
+  const overlay = document.getElementById('ratePopupOverlay');
+  overlay.style.display = 'flex';
+
+  // BOT blocks iframe — open in new tab instead, show message
+  const frame = document.getElementById('ratePopupFrame');
+  if (source === 'bot') {
+    frame.style.display = 'none';
+    // Show helper content inside iframe area
+    const helper = document.getElementById('ratePopupHelper') || (() => {
+      const d = document.createElement('div');
+      d.id = 'ratePopupHelper';
+      d.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;text-align:center;';
+      frame.parentNode.appendChild(d);
+      return d;
+    })();
+    helper.style.display = 'flex';
+    helper.innerHTML = `
+      <div style="font-size:48px;">🏦</div>
+      <div style="font-size:16px;font-weight:700;color:var(--text);">ธนาคารแห่งประเทศไทย</div>
+      <div style="font-size:14px;color:var(--text-muted);max-width:320px;line-height:1.6;">
+        เว็บ BOT ไม่รองรับการฝัง iframe<br>กดปุ่มด้านล่างเพื่อเปิดในแท็บใหม่<br>แล้วกลับมากรอกอัตราที่ช่อง USD/THB ด้านบน
+      </div>
+      <a href="https://www.bot.or.th/en/statistics/exchange-rate.html" target="_blank"
+        style="padding:12px 24px;background:var(--gold);color:#fff;border-radius:10px;
+        text-decoration:none;font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;">
+        🔗 เปิดเว็บ BOT
+      </a>
+      <div style="font-size:12px;color:var(--text-dim);">อัตราอ้างอิงของ ธปท. อัปเดตทุกวันทำการ</div>
+      <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:16px 24px;margin-top:8px;">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">หรือดูอัตราจาก API (ล่าสุด)</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--gold);">
+          ${prices.usdThb ? prices.usdThb.toFixed(4) + ' ฿' : 'กำลังโหลด...'}
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">แหล่งที่มา: Frankfurter API (ECB)</div>
+        ${prices.usdThb ? `<button onclick="document.getElementById('ratePopupInput').value='${prices.usdThb.toFixed(4)}';applyRateFromPopup();"
+          style="margin-top:10px;padding:8px 16px;background:var(--gold-bg);border:1.5px solid var(--gold-border);
+          border-radius:8px;color:var(--gold);font-weight:700;font-size:13px;cursor:pointer;">
+          ใช้อัตรานี้ ${prices.usdThb.toFixed(4)} ฿
+        </button>` : ''}
+      </div>`;
+  } else {
+    const helper = document.getElementById('ratePopupHelper');
+    if (helper) helper.style.display = 'none';
+    frame.style.display = 'block';
+    frame.src = src.url;
+  }
+}
+
+function applyRateFromPopup() {
+  const rate = parseFloat(document.getElementById('ratePopupInput').value);
+  if (!rate || rate <= 0) { alert('กรุณากรอกอัตราแลกเปลี่ยน'); return; }
+  document.getElementById('usdtRate').value = rate.toFixed(4);
+  document.getElementById('rateAutoHint').textContent = `✓ ใช้อัตรา ${rate.toFixed(4)} ฿`;
+  closeRatePopup();
+  calcPreview();
+}
+
+function closeRatePopup() {
+  document.getElementById('ratePopupOverlay').style.display = 'none';
+  document.getElementById('ratePopupFrame').src = '';
+}
+
+// Close popup on overlay click
+document.getElementById('ratePopupOverlay')?.addEventListener('click', function(e) {
+  if (e.target === this) closeRatePopup();
+});
 
 // ===== PLATFORM & PAYMETHOD LISTS =====
 const LISTS = {
