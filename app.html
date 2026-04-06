@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saving is the mother of everything</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --gold: #F5C842; --gold-dark: #C9A227; --gold-glow: rgba(245,200,66,0.2);
+  --btc: #F7931A; --btc-glow: rgba(247,147,26,0.2);
+  --silver: #A8B5C8; --silver-glow: rgba(168,181,200,0.2);
+  --bg: #0A0A0F; --surface: #111118; --surface2: #1A1A24; --surface3: #22222F;
+  --border: rgba(255,255,255,0.07); --border-gold: rgba(245,200,66,0.2);
+  --text: #F0EDE6; --text-muted: #8A8A9A; --text-dim: #555565;
+  --success: #22C55E; --error: #EF4444; --warning: #F59E0B;
+  --radius: 16px; --radius-sm: 10px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+/* ===== NAV ===== */
+.nav {
+  position: sticky; top:0; z-index:100;
+  background: rgba(10,10,15,0.85); backdrop-filter:blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 20px;
+  display: flex; align-items:center; justify-content:space-between; height:60px;
+}
+.nav-logo {
+  font-family:'Space Mono',monospace; font-size:14px; font-weight:700;
+  background:linear-gradient(135deg,var(--gold),var(--btc));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  letter-spacing:1.5px;
+}
+.nav-right { display:flex; align-items:center; gap:12px; }
+.nav-user { font-size:12px; color:var(--text-muted); }
+.btn-sm {
+  padding:8px 14px; border-radius:8px; border:1px solid var(--border-gold);
+  background:transparent; color:var(--gold); font-size:13px; cursor:pointer;
+  font-family:'Noto Sans Thai',sans-serif; transition:all 0.2s;
+}
+.btn-sm:hover { background:var(--gold-glow); }
+
+/* ===== LAYOUT ===== */
+.main { max-width:900px; margin:0 auto; padding:24px 16px 80px; }
+
+/* ===== TICKER ===== */
+.ticker-bar {
+  display:flex; gap:16px; flex-wrap:wrap;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius: var(--radius-sm); padding:12px 16px;
+  margin-bottom:24px; align-items:center;
+}
+.ticker-item { display:flex; align-items:center; gap:8px; }
+.ticker-badge {
+  font-family:'Space Mono',monospace; font-size:10px; font-weight:700;
+  padding:3px 7px; border-radius:5px; letter-spacing:1px;
+}
+.badge-gold { background:rgba(245,200,66,0.15); color:var(--gold); border:1px solid rgba(245,200,66,0.3); }
+.badge-btc { background:rgba(247,147,26,0.15); color:var(--btc); border:1px solid rgba(247,147,26,0.3); }
+.ticker-val { font-family:'Space Mono',monospace; font-size:13px; font-weight:700; }
+.ticker-change { font-size:11px; }
+.up { color:var(--success); } .down { color:var(--error); }
+.ticker-updated { font-size:10px; color:var(--text-dim); margin-left:auto; }
+.ticker-loading { font-size:12px; color:var(--text-muted); }
+
+/* ===== SUMMARY CARDS ===== */
+.summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-bottom:24px; }
+.summary-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:18px 20px;
+  transition: border-color 0.2s;
+}
+.summary-card:hover { border-color:var(--border-gold); }
+.sc-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+.sc-value { font-family:'Space Mono',monospace; font-size:22px; font-weight:700; }
+.sc-sub { font-size:11px; color:var(--text-muted); margin-top:4px; }
+.sc-icon { font-size:18px; margin-bottom:8px; }
+.positive { color:var(--success); } .negative { color:var(--error); } .neutral { color:var(--gold); }
+
+/* ===== SECTION HEADER ===== */
+.section-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:16px;
+}
+.section-title { font-size:15px; font-weight:600; color:var(--text); }
+.section-title span { color:var(--text-muted); font-weight:400; font-size:13px; margin-left:6px; }
+
+/* ===== ADD BUTTON ===== */
+.btn-add {
+  display:flex; align-items:center; gap:6px;
+  padding:9px 16px; border-radius:8px;
+  background:linear-gradient(135deg,var(--gold),var(--gold-dark));
+  border:none; color:#000; font-size:13px; font-weight:700;
+  cursor:pointer; font-family:'Noto Sans Thai',sans-serif;
+  transition:all 0.2s; white-space:nowrap;
+}
+.btn-add:hover { transform:translateY(-1px); box-shadow:0 6px 20px var(--gold-glow); }
+
+/* ===== FILTER TABS ===== */
+.filter-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+.filter-tab {
+  padding:6px 14px; border-radius:20px; border:1px solid var(--border);
+  background:transparent; color:var(--text-muted); font-size:12px;
+  cursor:pointer; font-family:'Noto Sans Thai',sans-serif; transition:all 0.2s;
+}
+.filter-tab.active { border-color:var(--gold); background:var(--gold-glow); color:var(--gold); }
+
+/* ===== RECORDS TABLE ===== */
+.records-wrap { overflow-x:auto; }
+.records-table {
+  width:100%; border-collapse:collapse;
+}
+.records-table th {
+  padding:10px 14px; text-align:left;
+  font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;
+  border-bottom:1px solid var(--border); white-space:nowrap;
+}
+.records-table td {
+  padding:12px 14px; font-size:13px;
+  border-bottom:1px solid var(--border);
+  vertical-align:middle;
+}
+.records-table tr:hover td { background:var(--surface2); }
+.records-table tr:last-child td { border-bottom:none; }
+
+.asset-badge {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700;
+  font-family:'Space Mono',monospace; letter-spacing:0.5px;
+}
+.asset-gold { background:rgba(245,200,66,0.1); color:var(--gold); border:1px solid rgba(245,200,66,0.2); }
+.asset-btc { background:rgba(247,147,26,0.1); color:var(--btc); border:1px solid rgba(247,147,26,0.2); }
+.asset-other { background:rgba(168,181,200,0.1); color:var(--silver); border:1px solid rgba(168,181,200,0.2); }
+
+.mono { font-family:'Space Mono',monospace; font-size:12px; }
+.pnl-pos { color:var(--success); font-weight:600; }
+.pnl-neg { color:var(--error); font-weight:600; }
+.pnl-zero { color:var(--text-muted); }
+
+.action-btn {
+  background:transparent; border:none; cursor:pointer; padding:5px;
+  color:var(--text-muted); border-radius:5px; transition:all 0.2s; font-size:15px;
+}
+.action-btn:hover { color:var(--error); background:rgba(239,68,68,0.1); }
+.action-btn.edit:hover { color:var(--gold); background:var(--gold-glow); }
+
+.empty-state {
+  text-align:center; padding:48px 20px; color:var(--text-muted);
+}
+.empty-state .icon { font-size:40px; margin-bottom:12px; opacity:0.4; }
+.empty-state p { font-size:14px; }
+
+/* ===== MODAL ===== */
+.modal-overlay {
+  position:fixed; inset:0; z-index:200;
+  background:rgba(0,0,0,0.7); backdrop-filter:blur(6px);
+  display:none; align-items:center; justify-content:center;
+  padding:16px;
+}
+.modal-overlay.open { display:flex; animation:fadeIn 0.2s ease; }
+.modal {
+  background:var(--surface); border:1px solid var(--border-gold);
+  border-radius:var(--radius); width:100%; max-width:460px;
+  max-height:90vh; overflow-y:auto;
+  box-shadow:0 40px 100px rgba(0,0,0,0.6);
+  animation:slideUp 0.3s ease;
+}
+.modal-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:20px 24px; border-bottom:1px solid var(--border);
+}
+.modal-title { font-size:16px; font-weight:600; }
+.modal-close { background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer; transition:color 0.2s; }
+.modal-close:hover { color:var(--error); }
+.modal-body { padding:24px; }
+.modal-footer { display:flex; gap:10px; padding:16px 24px; border-top:1px solid var(--border); }
+
+/* ===== FORM ===== */
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+.form-row.single { grid-template-columns:1fr; }
+.form-group label { display:block; font-size:12px; color:var(--text-muted); margin-bottom:7px; }
+.form-group input, .form-group select, .form-group textarea {
+  width:100%; padding:11px 14px;
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:var(--radius-sm); color:var(--text);
+  font-family:'Noto Sans Thai',sans-serif; font-size:14px; outline:none;
+  transition:border-color 0.2s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  border-color:var(--gold); box-shadow:0 0 0 2px var(--gold-glow);
+}
+.form-group select option { background:var(--surface2); }
+.form-group textarea { resize:vertical; min-height:80px; }
+.form-hint { font-size:11px; color:var(--text-dim); margin-top:5px; }
+
+.asset-selector { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+.asset-opt {
+  padding:10px 8px; border-radius:8px; border:2px solid var(--border);
+  background:transparent; cursor:pointer; text-align:center; transition:all 0.2s;
+  font-family:'Noto Sans Thai',sans-serif; color:var(--text-muted); font-size:12px;
+}
+.asset-opt .emoji { font-size:20px; display:block; margin-bottom:4px; }
+.asset-opt:hover { border-color:var(--border-gold); }
+.asset-opt.selected-gold { border-color:var(--gold); background:var(--gold-glow); color:var(--gold); }
+.asset-opt.selected-btc { border-color:var(--btc); background:var(--btc-glow); color:var(--btc); }
+.asset-opt.selected-other { border-color:var(--silver); background:var(--silver-glow); color:var(--silver); }
+
+.btn-full {
+  width:100%; padding:12px; border-radius:10px; border:none;
+  font-family:'Noto Sans Thai',sans-serif; font-size:14px; font-weight:700;
+  cursor:pointer; transition:all 0.2s;
+}
+.btn-primary { background:linear-gradient(135deg,var(--gold),var(--gold-dark)); color:#000; }
+.btn-primary:hover { box-shadow:0 6px 20px var(--gold-glow); }
+.btn-cancel { background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); }
+.btn-cancel:hover { border-color:var(--border-gold); color:var(--text); }
+
+/* ===== PRICE PREVIEW ===== */
+.price-preview {
+  background:var(--surface2); border-radius:var(--radius-sm);
+  padding:12px 14px; margin-top:12px; margin-bottom:14px;
+  display:none;
+}
+.price-preview.show { display:block; }
+.pp-row { display:flex; justify-content:space-between; font-size:13px; padding:3px 0; }
+.pp-row .label { color:var(--text-muted); }
+.pp-row .val { font-family:'Space Mono',monospace; font-weight:700; }
+.pp-divider { border:none; border-top:1px solid var(--border); margin:8px 0; }
+
+/* ===== TOAST ===== */
+.toast-wrap { position:fixed; bottom:24px; right:24px; z-index:999; display:flex; flex-direction:column; gap:8px; }
+.toast {
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:10px; padding:12px 18px; font-size:13px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4); min-width:200px;
+  animation:slideInRight 0.3s ease;
+  display:flex; align-items:center; gap:10px;
+}
+.toast.success { border-color:rgba(34,197,94,0.4); }
+.toast.error { border-color:rgba(239,68,68,0.4); }
+
+/* ===== CHART BAR ===== */
+.mini-chart { display:flex; align-items:flex-end; gap:3px; height:40px; margin-top:8px; }
+.chart-bar {
+  flex:1; border-radius:3px 3px 0 0; min-height:4px;
+  background:var(--gold); opacity:0.7; transition:opacity 0.2s;
+}
+.chart-bar:hover { opacity:1; }
+
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+@keyframes slideUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
+@keyframes slideInRight { from{transform:translateX(30px);opacity:0} to{transform:translateX(0);opacity:1} }
+
+/* ===== MOBILE ===== */
+@media(max-width:600px) {
+  .form-row { grid-template-columns:1fr; }
+  .summary-grid { grid-template-columns:1fr 1fr; }
+  .records-table th:nth-child(5), .records-table td:nth-child(5),
+  .records-table th:nth-child(6), .records-table td:nth-child(6) { display:none; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo" style="display:flex;align-items:center;gap:8px;">
+    <img src="https://cdn-icons-png.flaticon.com/512/5699/5699560.png" style="width:20px;height:20px;object-fit:contain;">
+    <img src="https://cdn-icons-png.flaticon.com/512/5968/5968260.png" style="width:20px;height:20px;object-fit:contain;">
+    <span>SAVING IS THE MOTHER OF EVERYTHING</span>
+  </div>
+  <div class="nav-right">
+    <span class="nav-user" id="navUser"></span>
+    <button class="btn-sm" onclick="logout()">ออกจากระบบ</button>
+  </div>
+</nav>
+
+<!-- PRICE TICKER -->
+<div style="max-width:900px;margin:20px auto 0;padding:0 16px;">
+  <div class="ticker-bar" id="tickerBar">
+    <span class="ticker-loading">⏳ กำลังดึงราคาตลาด...</span>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- SUMMARY CARDS -->
+  <div class="summary-grid" id="summaryGrid">
+    <div class="summary-card">
+      <div class="sc-icon">💵</div>
+      <div class="sc-label">ลงทุนทั้งหมด</div>
+      <div class="sc-value neutral" id="totalInvested">—</div>
+      <div class="sc-sub">บาท</div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-icon">📈</div>
+      <div class="sc-label">มูลค่าปัจจุบัน</div>
+      <div class="sc-value" id="totalCurrent">—</div>
+      <div class="sc-sub">บาท (ตามราคาตลาด)</div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-icon">💎</div>
+      <div class="sc-label">กำไร / ขาดทุน</div>
+      <div class="sc-value" id="totalPnL">—</div>
+      <div class="sc-sub" id="totalPnLPct">—</div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-icon">🗒️</div>
+      <div class="sc-label">จำนวนรายการ</div>
+      <div class="sc-value neutral" id="totalEntries">0</div>
+      <div class="sc-sub">รายการออม</div>
+    </div>
+  </div>
+
+  <!-- RECORDS SECTION -->
+  <div class="section-header">
+    <div class="section-title">บันทึกการออม <span id="recordCount"></span></div>
+    <button class="btn-add" onclick="openAddModal()">+ เพิ่มรายการ</button>
+  </div>
+
+  <!-- FILTER TABS -->
+  <div class="filter-tabs">
+    <button class="filter-tab active" onclick="setFilter('all', this)">ทั้งหมด</button>
+    <button class="filter-tab" onclick="setFilter('GOLD', this)">🥇 ทอง</button>
+    <button class="filter-tab" onclick="setFilter('BTC', this)">₿ Bitcoin</button>
+    <button class="filter-tab" onclick="setFilter('OTHER', this)">🪙 อื่นๆ</button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="records-wrap">
+    <table class="records-table">
+      <thead>
+        <tr>
+          <th>วันที่</th>
+          <th>สินทรัพย์</th>
+          <th>ต้นทุน (บาท)</th>
+          <th>จำนวน</th>
+          <th>ราคาซื้อ/หน่วย</th>
+          <th>มูลค่าปัจจุบัน</th>
+          <th>กำไร/ขาดทุน</th>
+          <th>หมายเหตุ</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="recordsBody">
+        <tr>
+          <td colspan="9">
+            <div class="empty-state">
+              <div class="icon">📋</div>
+              <p>ยังไม่มีบันทึกการออม กดปุ่ม "+ เพิ่มรายการ" เพื่อเริ่มต้น</p>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOnOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">เพิ่มรายการออม</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Asset Type -->
+      <div style="margin-bottom:6px;"><label style="font-size:12px;color:var(--text-muted);">ประเภทสินทรัพย์</label></div>
+      <div class="asset-selector">
+        <button class="asset-opt selected-gold" onclick="selectAsset('GOLD', this)" id="optGold">
+          <span class="emoji">🥇</span>ทอง
+        </button>
+        <button class="asset-opt" onclick="selectAsset('BTC', this)" id="optBTC">
+          <span class="emoji">₿</span>Bitcoin
+        </button>
+        <button class="asset-opt" onclick="selectAsset('OTHER', this)" id="optOther">
+          <span class="emoji">🪙</span>อื่นๆ
+        </button>
+      </div>
+
+      <!-- Asset name (for OTHER) -->
+      <div class="form-row single" id="customAssetRow" style="display:none">
+        <div class="form-group">
+          <label>ชื่อสินทรัพย์</label>
+          <input type="text" id="customAsset" placeholder="เช่น ETH, Silver, XRP">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>วันที่ซื้อ</label>
+          <input type="date" id="buyDate">
+        </div>
+        <div class="form-group">
+          <label>เลขที่อ้างอิง</label>
+          <input type="text" id="refNo" placeholder="เช่น 260406467455">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>จำนวนเงินที่จ่าย (บาท)</label>
+          <input type="number" id="amountPaid" placeholder="100" min="0" step="0.01" oninput="calcPreview()">
+        </div>
+        <div class="form-group">
+          <label>ราคาต่อหน่วย (<span id="unitLabel">บาท/กรัม</span>)</label>
+          <input type="number" id="pricePerUnit" placeholder="4697" min="0" step="0.0001" oninput="calcPreview()">
+        </div>
+      </div>
+
+      <div class="form-row single">
+        <div class="form-group">
+          <label>จำนวน (<span id="qtyLabel">กรัม</span>)</label>
+          <input type="number" id="quantity" placeholder="คำนวณอัตโนมัติ" min="0" step="0.00000001" oninput="calcPreview()">
+          <div class="form-hint">💡 กรอกจำนวนเงินและราคา ระบบจะคำนวณให้อัตโนมัติ</div>
+        </div>
+      </div>
+
+      <!-- Price Preview -->
+      <div class="price-preview" id="pricePreview">
+        <div class="pp-row"><span class="label">จำนวนเงิน</span><span class="val" id="pp_paid">—</span></div>
+        <div class="pp-row"><span class="label">ราคาซื้อ/หน่วย</span><span class="val" id="pp_price">—</span></div>
+        <hr class="pp-divider">
+        <div class="pp-row"><span class="label">จำนวนที่ได้รับ</span><span class="val" id="pp_qty">—</span></div>
+      </div>
+
+      <!-- Platform -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>แพลตฟอร์ม</label>
+          <input type="text" id="platform" placeholder="เช่น MTS Gold, Binance, Bitkub">
+        </div>
+        <div class="form-group">
+          <label>วิธีชำระเงิน</label>
+          <input type="text" id="payMethod" placeholder="เช่น SCBeasy, โอนธนาคาร">
+        </div>
+      </div>
+
+      <div class="form-row single">
+        <div class="form-group">
+          <label>หมายเหตุ</label>
+          <textarea id="notes" placeholder="บันทึกเพิ่มเติม..."></textarea>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-full btn-cancel" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn-full btn-primary" onclick="saveRecord()" id="saveBtn">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ===== SUPABASE CONFIG =====
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ===== STATE =====
+let currentUser = null;
+let records = [];
+let currentFilter = 'all';
+let editingId = null;
+let selectedAsset = 'GOLD';
+let prices = { gold: null, btc: null };
+
+// ===== INIT =====
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return window.location.href = 'index.html';
+  currentUser = session.user;
+
+  // Handle password reset redirect
+  if (new URLSearchParams(window.location.search).get('reset') === 'true') {
+    showPasswordResetPrompt();
+  }
+
+  document.getElementById('navUser').textContent = currentUser.user_metadata?.full_name || currentUser.email;
+  document.getElementById('buyDate').valueAsDate = new Date();
+
+  await Promise.all([loadRecords(), fetchPrices()]);
+})();
+
+// ===== FETCH PRICES =====
+async function fetchPrices() {
+  try {
+    // BTC price from CoinGecko (free, no API key)
+    const btcRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=thb,usd&include_24hr_change=true');
+    const btcData = await btcRes.json();
+    prices.btc = {
+      thb: btcData.bitcoin.thb,
+      change: btcData.bitcoin.thb_24h_change?.toFixed(2)
+    };
+
+    // Gold price: use goldapi.io free tier or manual
+    // Using a CORS-friendly endpoint for gold THB
+    const goldRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=thb&include_24hr_change=true');
+    const goldData = await goldRes.json();
+    // PAXG ≈ 1 troy oz = 31.1035g, convert to per gram
+    if (goldData['pax-gold']?.thb) {
+      prices.gold = {
+        thb: Math.round(goldData['pax-gold'].thb / 31.1035),
+        change: goldData['pax-gold'].thb_24h_change?.toFixed(2)
+      };
+    }
+
+    renderTicker();
+    renderRecords(); // re-render with prices
+    renderSummary();
+  } catch(e) {
+    document.getElementById('tickerBar').innerHTML = '<span class="ticker-loading" style="color:var(--error)">⚠️ ดึงราคาไม่ได้ (เชื่อมต่ออินเตอร์เน็ตและรีเฟรชใหม่)</span>';
+  }
+}
+
+function renderTicker() {
+  const html = [];
+  if (prices.gold) {
+    const chg = parseFloat(prices.gold.change);
+    const cls = chg >= 0 ? 'up' : 'down';
+    const sign = chg >= 0 ? '▲' : '▼';
+    html.push(`<div class="ticker-item">
+      <span class="ticker-badge badge-gold">GOLD</span>
+      <span class="ticker-val">${prices.gold.thb.toLocaleString()} ฿/g</span>
+      <span class="ticker-change ${cls}">${sign}${Math.abs(chg)}%</span>
+    </div>`);
+  }
+  if (prices.btc) {
+    const chg = parseFloat(prices.btc.change);
+    const cls = chg >= 0 ? 'up' : 'down';
+    const sign = chg >= 0 ? '▲' : '▼';
+    html.push(`<div class="ticker-item">
+      <span class="ticker-badge badge-btc">BTC</span>
+      <span class="ticker-val">${prices.btc.thb.toLocaleString()} ฿</span>
+      <span class="ticker-change ${cls}">${sign}${Math.abs(chg)}%</span>
+    </div>`);
+  }
+  html.push(`<span class="ticker-updated">อัปเดต: ${new Date().toLocaleTimeString('th-TH')}</span>`);
+  document.getElementById('tickerBar').innerHTML = html.join('');
+}
+
+// ===== LOAD RECORDS =====
+async function loadRecords() {
+  const { data, error } = await sb.from('savings_records')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('buy_date', { ascending: false });
+
+  if (error) return showToast('โหลดข้อมูลไม่สำเร็จ', 'error');
+  records = data || [];
+  renderRecords();
+  renderSummary();
+}
+
+// ===== RENDER RECORDS =====
+function renderRecords() {
+  const filtered = currentFilter === 'all' ? records : records.filter(r => r.asset_type === currentFilter);
+  document.getElementById('recordCount').textContent = `(${filtered.length} รายการ)`;
+
+  if (filtered.length === 0) {
+    document.getElementById('recordsBody').innerHTML = `
+      <tr><td colspan="9">
+        <div class="empty-state">
+          <div class="icon">${currentFilter === 'GOLD' ? '🥇' : currentFilter === 'BTC' ? '₿' : '📋'}</div>
+          <p>ยังไม่มีรายการ</p>
+        </div>
+      </td></tr>`;
+    return;
+  }
+
+  const rows = filtered.map(r => {
+    const assetClass = r.asset_type === 'GOLD' ? 'asset-gold' : r.asset_type === 'BTC' ? 'asset-btc' : 'asset-other';
+    const assetIcon = r.asset_type === 'GOLD' ? '🥇' : r.asset_type === 'BTC' ? '₿' : '🪙';
+    const assetName = r.asset_type === 'GOLD' ? 'GOLD' : r.asset_type === 'BTC' ? 'BTC' : (r.custom_asset || 'OTHER');
+
+    // Current value calc
+    let currentVal = null;
+    let pnlHtml = '<span class="pnl-zero">—</span>';
+    if (r.asset_type === 'GOLD' && prices.gold && r.quantity) {
+      currentVal = r.quantity * prices.gold.thb;
+    } else if (r.asset_type === 'BTC' && prices.btc && r.quantity) {
+      currentVal = r.quantity * prices.btc.thb;
+    }
+    if (currentVal !== null) {
+      const pnl = currentVal - r.amount_paid;
+      const pnlPct = ((pnl / r.amount_paid) * 100).toFixed(2);
+      const cls = pnl >= 0 ? 'pnl-pos' : 'pnl-neg';
+      const sign = pnl >= 0 ? '+' : '';
+      pnlHtml = `<span class="${cls}">${sign}${Math.round(pnl).toLocaleString()} ฿<br><small>${sign}${pnlPct}%</small></span>`;
+    }
+
+    const currentValHtml = currentVal !== null
+      ? `<span class="mono">${Math.round(currentVal).toLocaleString()} ฿</span>`
+      : '<span style="color:var(--text-dim)">N/A</span>';
+
+    const dateStr = new Date(r.buy_date).toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
+    const unitLabel = r.asset_type === 'GOLD' ? 'g' : r.asset_type === 'BTC' ? 'BTC' : '';
+    const qtyStr = r.quantity ? `${parseFloat(r.quantity).toPrecision(6)} ${unitLabel}` : '—';
+
+    return `<tr>
+      <td style="white-space:nowrap;color:var(--text-muted);font-size:12px">${dateStr}</td>
+      <td><span class="asset-badge ${assetClass}">${assetIcon} ${assetName}</span></td>
+      <td><span class="mono">${r.amount_paid.toLocaleString()} ฿</span></td>
+      <td><span class="mono" style="font-size:11px">${qtyStr}</span></td>
+      <td><span class="mono" style="font-size:11px">${r.price_per_unit ? r.price_per_unit.toLocaleString() : '—'}</span></td>
+      <td>${currentValHtml}</td>
+      <td>${pnlHtml}</td>
+      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--text-muted)">${r.notes || '—'}</td>
+      <td style="white-space:nowrap">
+        <button class="action-btn edit" onclick="openEditModal('${r.id}')" title="แก้ไข">✏️</button>
+        <button class="action-btn" onclick="deleteRecord('${r.id}')" title="ลบ">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+  document.getElementById('recordsBody').innerHTML = rows;
+}
+
+// ===== RENDER SUMMARY =====
+function renderSummary() {
+  const totalPaid = records.reduce((s, r) => s + r.amount_paid, 0);
+  let totalCurrent = 0; let canCalc = true;
+
+  records.forEach(r => {
+    if (r.asset_type === 'GOLD' && prices.gold && r.quantity) {
+      totalCurrent += r.quantity * prices.gold.thb;
+    } else if (r.asset_type === 'BTC' && prices.btc && r.quantity) {
+      totalCurrent += r.quantity * prices.btc.thb;
+    } else {
+      totalCurrent += r.amount_paid; // fallback: cost
+      canCalc = false;
+    }
+  });
+
+  const pnl = totalCurrent - totalPaid;
+  const pnlPct = totalPaid > 0 ? ((pnl / totalPaid) * 100).toFixed(2) : 0;
+
+  document.getElementById('totalInvested').textContent = totalPaid.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
+  document.getElementById('totalCurrent').textContent = totalCurrent.toLocaleString('th-TH', {minimumFractionDigits:0, maximumFractionDigits:0});
+  document.getElementById('totalCurrent').className = 'sc-value neutral';
+
+  const pnlEl = document.getElementById('totalPnL');
+  const pnlPctEl = document.getElementById('totalPnLPct');
+  const sign = pnl >= 0 ? '+' : '';
+  pnlEl.textContent = sign + Math.round(pnl).toLocaleString() + ' ฿';
+  pnlEl.className = 'sc-value ' + (pnl > 0 ? 'positive' : pnl < 0 ? 'negative' : 'neutral');
+  pnlPctEl.textContent = sign + pnlPct + '%' + (!canCalc ? ' *บางรายการประมาณ' : '');
+
+  document.getElementById('totalEntries').textContent = records.length;
+}
+
+// ===== FILTER =====
+function setFilter(type, btn) {
+  currentFilter = type;
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderRecords();
+}
+
+// ===== MODAL =====
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = '➕ เพิ่มรายการออม';
+  clearForm();
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function openEditModal(id) {
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = '✏️ แก้ไขรายการ';
+
+  selectAsset(r.asset_type, document.getElementById('opt' + (r.asset_type === 'OTHER' ? 'Other' : r.asset_type)));
+  if (r.asset_type === 'OTHER') document.getElementById('customAsset').value = r.custom_asset || '';
+  document.getElementById('buyDate').value = r.buy_date;
+  document.getElementById('refNo').value = r.ref_no || '';
+  document.getElementById('amountPaid').value = r.amount_paid;
+  document.getElementById('pricePerUnit').value = r.price_per_unit || '';
+  document.getElementById('quantity').value = r.quantity || '';
+  document.getElementById('platform').value = r.platform || '';
+  document.getElementById('payMethod').value = r.pay_method || '';
+  document.getElementById('notes').value = r.notes || '';
+  calcPreview();
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+function closeModalOnOutside(e) { if (e.target === document.getElementById('modalOverlay')) closeModal(); }
+
+function clearForm() {
+  ['refNo','amountPaid','pricePerUnit','quantity','platform','payMethod','notes','customAsset'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('buyDate').valueAsDate = new Date();
+  selectAsset('GOLD', document.getElementById('optGold'));
+  document.getElementById('pricePreview').classList.remove('show');
+}
+
+// ===== ASSET SELECTOR =====
+function selectAsset(type, btn) {
+  selectedAsset = type;
+  ['optGold','optBTC','optOther'].forEach(id => {
+    document.getElementById(id).className = 'asset-opt';
+  });
+  const classMap = { GOLD:'selected-gold', BTC:'selected-btc', OTHER:'selected-other' };
+  if (btn) btn.className = 'asset-opt ' + classMap[type];
+
+  const unitMap = { GOLD:['บาท/กรัม','กรัม'], BTC:['USDT','BTC'], OTHER:['บาท/หน่วย','หน่วย'] };
+  const [priceUnit, qtyUnit] = unitMap[type];
+  document.getElementById('unitLabel').textContent = priceUnit;
+  document.getElementById('qtyLabel').textContent = qtyUnit;
+  document.getElementById('customAssetRow').style.display = type === 'OTHER' ? 'block' : 'none';
+
+  // Auto-fill current market price
+  if (type === 'GOLD' && prices.gold) document.getElementById('pricePerUnit').value = prices.gold.thb;
+  else if (type === 'BTC' && prices.btc) document.getElementById('pricePerUnit').value = prices.btc.thb;
+  else document.getElementById('pricePerUnit').value = '';
+
+  calcPreview();
+}
+
+// ===== PRICE PREVIEW =====
+function calcPreview() {
+  const paid = parseFloat(document.getElementById('amountPaid').value);
+  const price = parseFloat(document.getElementById('pricePerUnit').value);
+  let qty = parseFloat(document.getElementById('quantity').value);
+
+  if (paid && price && !qty) {
+    qty = paid / price;
+    document.getElementById('quantity').value = qty.toFixed(8);
+  }
+
+  if (!paid && !price) {
+    document.getElementById('pricePreview').classList.remove('show');
+    return;
+  }
+
+  const unitMap = { GOLD:'กรัม', BTC:'BTC', OTHER:'หน่วย' };
+  const unit = unitMap[selectedAsset];
+
+  document.getElementById('pp_paid').textContent = paid ? paid.toLocaleString() + ' ฿' : '—';
+  document.getElementById('pp_price').textContent = price ? price.toLocaleString() + ' ฿' : '—';
+  document.getElementById('pp_qty').textContent = qty ? qty.toFixed(8) + ' ' + unit : '—';
+  document.getElementById('pricePreview').classList.add('show');
+}
+
+// ===== SAVE RECORD =====
+async function saveRecord() {
+  const paid = parseFloat(document.getElementById('amountPaid').value);
+  if (!paid || paid <= 0) return showToast('กรุณากรอกจำนวนเงิน', 'error');
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+
+  const payload = {
+    user_id: currentUser.id,
+    asset_type: selectedAsset,
+    custom_asset: selectedAsset === 'OTHER' ? document.getElementById('customAsset').value : null,
+    buy_date: document.getElementById('buyDate').value || new Date().toISOString().split('T')[0],
+    ref_no: document.getElementById('refNo').value || null,
+    amount_paid: paid,
+    price_per_unit: parseFloat(document.getElementById('pricePerUnit').value) || null,
+    quantity: parseFloat(document.getElementById('quantity').value) || null,
+    platform: document.getElementById('platform').value || null,
+    pay_method: document.getElementById('payMethod').value || null,
+    notes: document.getElementById('notes').value || null,
+    updated_at: new Date().toISOString()
+  };
+
+  let error;
+  if (editingId) {
+    ({ error } = await sb.from('savings_records').update(payload).eq('id', editingId));
+  } else {
+    ({ error } = await sb.from('savings_records').insert(payload));
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'บันทึก';
+
+  if (error) return showToast('บันทึกไม่สำเร็จ: ' + error.message, 'error');
+  showToast(editingId ? '✅ แก้ไขสำเร็จ' : '✅ เพิ่มรายการสำเร็จ', 'success');
+  closeModal();
+  await loadRecords();
+}
+
+// ===== DELETE =====
+async function deleteRecord(id) {
+  if (!confirm('ลบรายการนี้?')) return;
+  const { error } = await sb.from('savings_records').delete().eq('id', id);
+  if (error) return showToast('ลบไม่สำเร็จ', 'error');
+  showToast('🗑️ ลบรายการแล้ว', 'success');
+  await loadRecords();
+}
+
+// ===== LOGOUT =====
+async function logout() {
+  await sb.auth.signOut();
+  window.location.href = 'index.html';
+}
+
+// ===== TOAST =====
+function showToast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  document.getElementById('toastWrap').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ===== PASSWORD RESET PROMPT =====
+function showPasswordResetPrompt() {
+  const newPwd = prompt('กรุณากรอกรหัสผ่านใหม่ (อย่างน้อย 6 ตัว):');
+  if (!newPwd || newPwd.length < 6) return;
+  sb.auth.updateUser({ password: newPwd }).then(({ error }) => {
+    if (error) alert('เปลี่ยนรหัสผ่านไม่สำเร็จ: ' + error.message);
+    else { alert('✅ เปลี่ยนรหัสผ่านสำเร็จ!'); window.location.href = 'app.html'; }
+  });
+}
+
+// Auto-refresh prices every 5 minutes
+setInterval(fetchPrices, 5 * 60 * 1000);
+</script>
+</body>
+</html>
