@@ -637,6 +637,10 @@ function renderTicker() {
 
   html.push(`<div class="ticker-updated">อัปเดต ${new Date().toLocaleTimeString('th-TH')}</div>`);
   document.getElementById('tickerBar').innerHTML = html.join('');
+
+  // อัปเดต rate display ใน modal ถ้าเปิดอยู่
+  updateRateDisplay();
+  if (document.getElementById('currency')?.value === 'USDT') calcPreview();
 }
 
 // ===== LOAD RECORDS =====
@@ -782,14 +786,30 @@ function openEditModal(id) {
 
   selectAsset(r.asset_type, document.getElementById('opt' + (r.asset_type === 'OTHER' ? 'Other' : r.asset_type)));
   if (r.asset_type === 'OTHER') document.getElementById('customAsset').value = r.custom_asset || '';
-  document.getElementById('buyDate').value = r.buy_date;
-  document.getElementById('refNo').value = r.ref_no || '';
-  document.getElementById('amountPaid').value = r.amount_paid;
-  document.getElementById('pricePerUnit').value = r.price_per_unit || '';
-  document.getElementById('quantity').value = r.quantity || '';
-  document.getElementById('platform').value = r.platform || '';
-  document.getElementById('payMethod').value = r.pay_method || '';
-  document.getElementById('notes').value = r.notes || '';
+  document.getElementById('buyDate').value       = r.buy_date;
+  document.getElementById('refNo').value         = r.ref_no || '';
+  document.getElementById('currency').value      = 'THB'; // edit ใช้ THB เสมอ (บันทึกเป็นบาทแล้ว)
+  document.getElementById('currencyLabel').textContent = 'บาท';
+  document.getElementById('usdtConvertRow').style.display = 'none';
+  document.getElementById('amountPaid').value    = r.amount_paid;
+  document.getElementById('pricePerUnit').value  = r.price_per_unit || '';
+  document.getElementById('quantity').value      = r.quantity || '';
+  document.getElementById('platform').value      = r.platform || '';
+  document.getElementById('payMethod').value     = r.pay_method || '';
+  document.getElementById('notes').value         = r.notes || '';
+
+  // แสดง slip ถ้ามี
+  if (r.slip_image) {
+    slipBase64 = r.slip_image;
+    document.getElementById('slipPreview').src         = slipBase64;
+    document.getElementById('slipPreviewWrap').style.display = 'block';
+    document.getElementById('slipDropZone').style.display    = 'none';
+  } else {
+    removeSlip();
+  }
+
+  _qtyManual = true; // ไม่ให้ auto-overwrite จำนวนตอนแก้ไข
+  updateRateDisplay();
   calcPreview();
   document.getElementById('modalOverlay').classList.add('open');
 }
@@ -837,14 +857,21 @@ function selectAsset(type, btn) {
 
 // ===== CURRENCY TOGGLE =====
 function onCurrencyChange() {
-  const cur = document.getElementById('currency').value;
+  const cur    = document.getElementById('currency').value;
   const isUSDT = cur === 'USDT';
   document.getElementById('currencyLabel').textContent = isUSDT ? 'USDT' : 'บาท';
   document.getElementById('usdtConvertRow').style.display = isUSDT ? 'block' : 'none';
-  if (isUSDT && prices.usdThb) {
-    document.getElementById('rateDisplay').textContent = prices.usdThb?.toFixed(2) + ' บาท';
-  }
+  updateRateDisplay();
   calcPreview();
+}
+
+function updateRateDisplay() {
+  const rate = prices.usdThb;
+  if (rate) {
+    document.getElementById('rateDisplay').textContent = rate.toFixed(2) + ' บาท/USD';
+  } else {
+    document.getElementById('rateDisplay').textContent = 'กำลังโหลด...';
+  }
 }
 
 function getAmountInThb() {
@@ -852,8 +879,15 @@ function getAmountInThb() {
   const cur = document.getElementById('currency').value;
   if (cur === 'USDT') {
     const rate = prices.usdThb || 0;
-    const thb = raw * rate;
-    document.getElementById('usdtToThb').textContent = thb.toLocaleString('th-TH', {maximumFractionDigits:2}) + ' บาท';
+    const thb  = raw * rate;
+    const el   = document.getElementById('usdtToThb');
+    if (el) {
+      if (rate === 0) {
+        el.textContent = 'กำลังโหลดอัตราแลกเปลี่ยน...';
+      } else {
+        el.textContent = thb.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' บาท';
+      }
+    }
     return thb;
   }
   return raw;
