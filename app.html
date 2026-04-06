@@ -278,12 +278,15 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
   .nav-user { font-size:12px; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 }
 
+/* Card สำหรับ mobile */
+.records-cards { display:none; }
+
 @media(max-width:600px) {
   .form-row { grid-template-columns:1fr; }
 
   /* ซ่อนตาราง แสดง card แทน */
-  .records-wrap { display:none; }
-  .records-cards { display:flex; flex-direction:column; gap:10px; }
+  .records-wrap { display:none !important; }
+  .records-cards { display:flex !important; flex-direction:column; gap:10px; }
 
   .section-header { flex-direction:column; align-items:flex-start; gap:10px; }
   .btn-add { width:100%; justify-content:center; }
@@ -294,9 +297,6 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
   .toast-wrap { bottom:16px; right:12px; left:12px; }
   .toast { min-width:unset; width:100%; }
 }
-
-/* Card สำหรับ mobile */
-.records-cards { display:none; }
 .record-card {
   background:var(--surface); border:1.5px solid var(--border);
   border-radius:var(--radius); padding:16px;
@@ -659,6 +659,7 @@ let prices = { gold: null, btc: null, usdt: null, usdThb: null };
   // โหลด prices ก่อน แล้วค่อย loadRecords เพื่อให้มูลค่าปัจจุบันแสดงทันที
   await fetchPrices();
   await loadRecords();
+  toggleView();
 })();
 
 // ===== FETCH PRICES =====
@@ -888,7 +889,26 @@ function renderRecords() {
   }).join('');
   document.getElementById('recordsBody').innerHTML = rows;
   renderCards(filtered);
+  toggleView();
 }
+
+// ===== MOBILE DETECTION =====
+function isMobile() { return window.innerWidth <= 600; }
+function toggleView() {
+  const wrap  = document.querySelector('.records-wrap');
+  const cards = document.getElementById('recordsCards');
+  if (!wrap || !cards) return;
+  if (isMobile()) {
+    wrap.style.display  = 'none';
+    cards.style.display = 'flex';
+    cards.style.flexDirection = 'column';
+    cards.style.gap = '10px';
+  } else {
+    wrap.style.display  = '';
+    cards.style.display = 'none';
+  }
+}
+window.addEventListener('resize', toggleView);
 
 // ===== RENDER CARDS (Mobile) =====
 function renderCards(filtered) {
