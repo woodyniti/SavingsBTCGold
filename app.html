@@ -418,22 +418,38 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
 
       <div class="form-row">
         <div class="form-group">
-          <label>จำนวนเงินที่จ่าย (บาท)</label>
-          <input type="number" id="amountPaid" placeholder="100" min="0" step="0.01" oninput="calcPreview()">
+          <label>สกุลเงินที่จ่าย</label>
+          <select id="currency" onchange="onCurrencyChange()">
+            <option value="THB">🇹🇭 บาทไทย (THB)</option>
+            <option value="USDT">💵 USDT (USD)</option>
+          </select>
         </div>
         <div class="form-group">
-          <label>ราคาต่อหน่วย (<span id="unitLabel">บาท/กรัม</span>)</label>
-          <input type="number" id="pricePerUnit" placeholder="4697" min="0" step="0.0001" oninput="calcPreview()">
+          <label>จำนวนเงินที่จ่าย (<span id="currencyLabel">บาท</span>)</label>
+          <input type="number" id="amountPaid" placeholder="100" min="0" step="any" oninput="calcPreview()">
         </div>
       </div>
 
-      <div class="form-row single">
+      <!-- USDT → THB converter -->
+      <div id="usdtConvertRow" style="display:none;margin-bottom:14px;">
+        <div style="background:var(--gold-bg);border:1.5px solid var(--gold-border);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="color:var(--text-muted)">≈ เทียบเท่า</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--gold);" id="usdtToThb">— บาท</span>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:5px;">อัตรา USD/THB: <span id="rateDisplay">—</span> · ระบบบันทึกเป็นบาทอัตโนมัติ</div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>ราคาต่อหน่วย (<span id="unitLabel">บาท/กรัม</span>)</label>
+          <input type="number" id="pricePerUnit" placeholder="4697" min="0" step="any" oninput="onPriceInput()">
+        </div>
         <div class="form-group">
           <label>จำนวน (<span id="qtyLabel">กรัม</span>)</label>
-          <input type="number" id="quantity" placeholder="คำนวณอัตโนมัติ" min="0" step="0.00000001" oninput="calcPreview()">
-          <div class="form-hint">💡 กรอกจำนวนเงินและราคา ระบบจะคำนวณให้อัตโนมัติ</div>
+          <input type="number" id="quantity" placeholder="คำนวณอัตโนมัติ" min="0" step="any" oninput="onQtyInput()">
         </div>
       </div>
+      <div class="form-hint" style="margin-top:-10px;margin-bottom:12px;">💡 กรอกเงิน + ราคา → จำนวนคำนวณอัตโนมัติ (หรือกรอกจำนวนเองได้)</div>
 
       <!-- Price Preview -->
       <div class="price-preview" id="pricePreview">
@@ -443,15 +459,23 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
         <div class="pp-row"><span class="label">จำนวนที่ได้รับ</span><span class="val" id="pp_qty">—</span></div>
       </div>
 
-      <!-- Platform -->
+      <!-- Platform with datalist -->
       <div class="form-row">
         <div class="form-group">
           <label>แพลตฟอร์ม</label>
-          <input type="text" id="platform" placeholder="เช่น MTS Gold, Binance, Bitkub">
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="platform" placeholder="เลือกหรือพิมพ์..." list="platformList" autocomplete="off" style="flex:1;">
+            <button type="button" onclick="addToList('platform')" style="padding:0 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);cursor:pointer;font-size:18px;color:var(--gold);" title="เพิ่มใหม่">+</button>
+          </div>
+          <datalist id="platformList"></datalist>
         </div>
         <div class="form-group">
           <label>วิธีชำระเงิน</label>
-          <input type="text" id="payMethod" placeholder="เช่น SCBeasy, โอนธนาคาร">
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="payMethod" placeholder="เลือกหรือพิมพ์..." list="payMethodList" autocomplete="off" style="flex:1;">
+            <button type="button" onclick="addToList('payMethod')" style="padding:0 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);cursor:pointer;font-size:18px;color:var(--gold);" title="เพิ่มใหม่">+</button>
+          </div>
+          <datalist id="payMethodList"></datalist>
         </div>
       </div>
 
@@ -459,6 +483,24 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
         <div class="form-group">
           <label>หมายเหตุ</label>
           <textarea id="notes" placeholder="บันทึกเพิ่มเติม..."></textarea>
+        </div>
+      </div>
+
+      <!-- Slip Upload -->
+      <div class="form-row single">
+        <div class="form-group">
+          <label>แนบ Slip / รูปภาพ</label>
+          <div id="slipDropZone" onclick="document.getElementById('slipInput').click()"
+            style="border:2px dashed var(--border);border-radius:var(--radius-sm);padding:20px;text-align:center;cursor:pointer;transition:all 0.15s;background:var(--surface2);">
+            <div style="font-size:28px;margin-bottom:6px;">📎</div>
+            <div style="font-size:13px;color:var(--text-muted);">คลิกหรือลากรูปมาวาง</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">JPG, PNG, WEBP ขนาดไม่เกิน 5MB</div>
+          </div>
+          <input type="file" id="slipInput" accept="image/*" style="display:none" onchange="onSlipSelected(event)">
+          <div id="slipPreviewWrap" style="display:none;margin-top:10px;position:relative;">
+            <img id="slipPreview" style="width:100%;max-height:200px;object-fit:contain;border-radius:var(--radius-sm);border:1.5px solid var(--border);">
+            <button type="button" onclick="removeSlip()" style="position:absolute;top:6px;right:6px;background:rgba(220,38,38,0.9);border:none;color:#fff;border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">✕</button>
+          </div>
         </div>
       </div>
 
@@ -509,13 +551,16 @@ let prices = { gold: null, btc: null };
 // สูตร TradingView: TVC:GOLD / 31.1034 * 15.244 * 0.965 * OANDA:USDTHB
 async function fetchPrices() {
   try {
-    // ดึง XAU/USD (ทองโลก), BTC/THB, BTC/USD และ USD/THB พร้อมกัน
     const [cryptoRes, fxRes] = await Promise.all([
-      fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,gold&vs_currencies=thb,usd&include_24hr_change=true'),
+      fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,tether&vs_currencies=thb,usd&include_24hr_change=true'),
       fetch('https://api.frankfurter.app/latest?from=USD&to=THB')
     ]);
     const cryptoData = await cryptoRes.json();
     const fxData     = await fxRes.json();
+
+    // USD/THB
+    const usdThb = fxData?.rates?.THB;
+    prices.usdThb = usdThb;
 
     // BTC
     prices.btc = {
@@ -524,30 +569,31 @@ async function fetchPrices() {
       change: cryptoData.bitcoin?.thb_24h_change?.toFixed(2)
     };
 
-    // GOLD — สูตร TradingView: XAU(USD/oz) / 31.1034 * 15.244 * 0.965 * USDTHB
-    const xauUsd = cryptoData.gold?.usd;
-    const usdThb = fxData?.rates?.THB;
+    // USDT ≈ 1 USD (แต่ดึงราคาจริงมาด้วย)
+    prices.usdt = { thb: usdThb, usd: 1 };
+
+    // GOLD — XAU/USD จาก metals API ผ่าน frankfurter fallback
+    // ใช้ PAXG จาก CoinGecko แทน (pax-gold = 1 troy oz gold)
+    const paxRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=usd');
+    const paxData = await paxRes.json();
+    const xauUsd = paxData['pax-gold']?.usd;
 
     if (xauUsd && usdThb) {
-      const perGram    = xauUsd / 31.1034 * usdThb;          // THB/กรัม
-      const sellBaht   = perGram * 15.244 * 0.965;            // ราคาขายออก (บาทไทย/บาททอง 96.5%)
-      const buyBaht    = sellBaht - 200;                       // spread ~200 บาท (ใกล้เคียงตลาดจริง)
-      const buyPerGram = perGram * 0.965 - (200 / 15.244);
-
+      const perGram  = xauUsd / 31.1034 * usdThb;
+      const sellBaht = perGram * 15.244 * 0.965;
+      const buyBaht  = sellBaht - 200;
       prices.gold = {
         sell_per_gram: Math.round(perGram),
-        buy_per_gram:  Math.round(buyPerGram),
+        buy_per_gram:  Math.round(perGram * 0.997),
         sell_baht:     Math.round(sellBaht),
         buy_baht:      Math.round(buyBaht),
         thb:           Math.round(perGram),
-        xau_usd:       xauUsd.toLocaleString(),
-        usd_thb:       usdThb.toFixed(2),
-        source:        `XAU $${Math.round(xauUsd).toLocaleString()} · USD/THB ${usdThb.toFixed(2)}`
+        xau_usd:       Math.round(xauUsd).toLocaleString(),
+        usd_thb:       usdThb?.toFixed(2),
+        source:        `XAU $${Math.round(xauUsd).toLocaleString()} · USD/THB ${usdThb?.toFixed(2)}`
       };
     }
-  } catch(e) {
-    console.warn('Price fetch error', e);
-  }
+  } catch(e) { console.warn('Price fetch error', e); }
 
   renderTicker();
   renderRecords();
@@ -670,6 +716,7 @@ function renderRecords() {
       <td>${pnlHtml}</td>
       <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--text-muted)">${r.notes || '—'}</td>
       <td style="white-space:nowrap">
+        ${r.slip_image ? `<button class="action-btn" onclick="viewSlip('${r.id}')" title="ดู Slip" style="font-size:18px;">🧾</button>` : ''}
         <button class="action-btn edit" onclick="openEditModal('${r.id}')" title="แก้ไข">✏️</button>
         <button class="action-btn" onclick="deleteRecord('${r.id}')" title="ลบ">🗑️</button>
       </td>
@@ -756,8 +803,13 @@ function clearForm() {
     if (el) el.value = '';
   });
   document.getElementById('buyDate').valueAsDate = new Date();
+  document.getElementById('currency').value = 'THB';
+  document.getElementById('currencyLabel').textContent = 'บาท';
+  document.getElementById('usdtConvertRow').style.display = 'none';
   selectAsset('GOLD', document.getElementById('optGold'));
   document.getElementById('pricePreview').classList.remove('show');
+  _qtyManual = false;
+  removeSlip();
 }
 
 // ===== ASSET SELECTOR =====
@@ -783,35 +835,73 @@ function selectAsset(type, btn) {
   calcPreview();
 }
 
-// ===== PRICE PREVIEW =====
-function calcPreview() {
-  const paid = parseFloat(document.getElementById('amountPaid').value);
-  const price = parseFloat(document.getElementById('pricePerUnit').value);
-  let qty = parseFloat(document.getElementById('quantity').value);
+// ===== CURRENCY TOGGLE =====
+function onCurrencyChange() {
+  const cur = document.getElementById('currency').value;
+  const isUSDT = cur === 'USDT';
+  document.getElementById('currencyLabel').textContent = isUSDT ? 'USDT' : 'บาท';
+  document.getElementById('usdtConvertRow').style.display = isUSDT ? 'block' : 'none';
+  if (isUSDT && prices.usdThb) {
+    document.getElementById('rateDisplay').textContent = prices.usdThb?.toFixed(2) + ' บาท';
+  }
+  calcPreview();
+}
 
-  if (paid && price && !qty) {
+function getAmountInThb() {
+  const raw = parseFloat(document.getElementById('amountPaid').value) || 0;
+  const cur = document.getElementById('currency').value;
+  if (cur === 'USDT') {
+    const rate = prices.usdThb || 0;
+    const thb = raw * rate;
+    document.getElementById('usdtToThb').textContent = thb.toLocaleString('th-TH', {maximumFractionDigits:2}) + ' บาท';
+    return thb;
+  }
+  return raw;
+}
+
+// ===== PRICE PREVIEW =====
+let _qtyManual = false; // flag: user typed qty manually
+
+function onPriceInput() { _qtyManual = false; calcPreview(); }
+function onQtyInput()   { _qtyManual = true;  calcPreview(); }
+
+function calcPreview() {
+  const paid  = getAmountInThb();
+  const price = parseFloat(document.getElementById('pricePerUnit').value) || 0;
+  let qty     = parseFloat(document.getElementById('quantity').value) || 0;
+
+  // Auto-calc qty only when: paid & price filled, AND user hasn't typed qty manually
+  if (paid > 0 && price > 0 && !_qtyManual) {
     qty = paid / price;
     document.getElementById('quantity').value = qty.toFixed(8);
   }
-
-  if (!paid && !price) {
-    document.getElementById('pricePreview').classList.remove('show');
-    return;
+  // Auto-calc paid if qty typed manually and price exists
+  if (_qtyManual && qty > 0 && price > 0 && !paid) {
+    // leave paid as is
   }
 
-  const unitMap = { GOLD:'กรัม', BTC:'BTC', OTHER:'หน่วย' };
-  const unit = unitMap[selectedAsset];
+  if (!paid && !price && !qty) { document.getElementById('pricePreview').classList.remove('show'); return; }
 
-  document.getElementById('pp_paid').textContent = paid ? paid.toLocaleString() + ' ฿' : '—';
-  document.getElementById('pp_price').textContent = price ? price.toLocaleString() + ' ฿' : '—';
-  document.getElementById('pp_qty').textContent = qty ? qty.toFixed(8) + ' ' + unit : '—';
+  const unitMap  = { GOLD:'กรัม', BTC:'BTC', OTHER:'หน่วย' };
+  const unit     = unitMap[selectedAsset] || 'หน่วย';
+  const cur      = document.getElementById('currency').value;
+  const rawAmt   = parseFloat(document.getElementById('amountPaid').value) || 0;
+  const paidLabel = cur === 'USDT'
+    ? `${rawAmt.toFixed(4)} USDT (≈ ${Math.round(paid).toLocaleString()} ฿)`
+    : paid ? paid.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' ฿' : '—';
+
+  document.getElementById('pp_paid').textContent  = paidLabel;
+  document.getElementById('pp_price').textContent = price ? price.toLocaleString('th-TH') + ' ฿' : '—';
+  document.getElementById('pp_qty').textContent   = qty ? qty.toFixed(8) + ' ' + unit : '—';
   document.getElementById('pricePreview').classList.add('show');
 }
 
 // ===== SAVE RECORD =====
 async function saveRecord() {
-  const paid = parseFloat(document.getElementById('amountPaid').value);
-  if (!paid || paid <= 0) return showToast('กรุณากรอกจำนวนเงิน', 'error');
+  const paidRaw  = parseFloat(document.getElementById('amountPaid').value);
+  const currency = document.getElementById('currency').value;
+  const paid     = getAmountInThb();
+  if (!paidRaw || paidRaw <= 0) return showToast('กรุณากรอกจำนวนเงิน', 'error');
 
   const btn = document.getElementById('saveBtn');
   btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
@@ -822,12 +912,15 @@ async function saveRecord() {
     custom_asset: selectedAsset === 'OTHER' ? document.getElementById('customAsset').value : null,
     buy_date: document.getElementById('buyDate').value || new Date().toISOString().split('T')[0],
     ref_no: document.getElementById('refNo').value || null,
-    amount_paid: paid,
+    amount_paid: paid, // บันทึกเป็นบาทเสมอ
     price_per_unit: parseFloat(document.getElementById('pricePerUnit').value) || null,
     quantity: parseFloat(document.getElementById('quantity').value) || null,
     platform: document.getElementById('platform').value || null,
     pay_method: document.getElementById('payMethod').value || null,
-    notes: document.getElementById('notes').value || null,
+    notes: (currency === 'USDT'
+      ? `[จ่าย ${paidRaw} USDT @ ${prices.usdThb?.toFixed(2)} ฿] `
+      : '') + (document.getElementById('notes').value || ''),
+    slip_image: slipBase64 || null,
     updated_at: new Date().toISOString()
   };
 
@@ -847,7 +940,100 @@ async function saveRecord() {
   await loadRecords();
 }
 
-// ===== DELETE =====
+// ===== PLATFORM & PAYMETHOD LISTS =====
+const LISTS = {
+  platform: { key:'sv_platforms', defaults:['MTS Gold','Bitkub','Binance','OKX','Kraken'] },
+  payMethod: { key:'sv_paymethods', defaults:['SCBeasy','KMA','โอนธนาคาร','บัตรเครดิต','PromptPay'] }
+};
+
+function loadList(id) {
+  const cfg  = LISTS[id];
+  const saved = JSON.parse(localStorage.getItem(cfg.key) || 'null');
+  return saved || cfg.defaults;
+}
+
+function saveList(id, arr) {
+  localStorage.setItem(LISTS[id].key, JSON.stringify(arr));
+}
+
+function renderDatalist(id) {
+  const dl  = document.getElementById(id + 'List');
+  const arr = loadList(id);
+  dl.innerHTML = arr.map(v => `<option value="${v}">`).join('');
+}
+
+function addToList(id) {
+  const input = document.getElementById(id);
+  const val   = input.value.trim();
+  if (!val) { input.focus(); return; }
+  const arr = loadList(id);
+  if (arr.map(x => x.toLowerCase()).includes(val.toLowerCase())) {
+    showToast('มีชื่อนี้อยู่แล้ว', 'error'); return;
+  }
+  arr.push(val);
+  saveList(id, arr);
+  renderDatalist(id);
+  showToast(`✅ เพิ่ม "${val}" แล้ว`, 'success');
+}
+
+// Init datalists on load
+renderDatalist('platform');
+renderDatalist('payMethod');
+
+// ===== SLIP UPLOAD =====
+let slipBase64 = null;
+
+function onSlipSelected(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { showToast('ไฟล์ใหญ่เกิน 5MB', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    slipBase64 = ev.target.result;
+    document.getElementById('slipPreview').src = slipBase64;
+    document.getElementById('slipPreviewWrap').style.display = 'block';
+    document.getElementById('slipDropZone').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeSlip() {
+  slipBase64 = null;
+  document.getElementById('slipInput').value = '';
+  document.getElementById('slipPreviewWrap').style.display = 'none';
+  document.getElementById('slipDropZone').style.display = 'block';
+}
+
+// Drag & drop slip
+document.addEventListener('DOMContentLoaded', () => {
+  const dz = document.getElementById('slipDropZone');
+  if (!dz) return;
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = 'var(--gold)'; dz.style.background = 'var(--gold-bg)'; });
+  dz.addEventListener('dragleave', () => { dz.style.borderColor = ''; dz.style.background = ''; });
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.style.borderColor = ''; dz.style.background = '';
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const dt = new DataTransfer(); dt.items.add(file);
+      document.getElementById('slipInput').files = dt.files;
+      onSlipSelected({ target: document.getElementById('slipInput') });
+    }
+  });
+});
+// ===== VIEW SLIP =====
+function viewSlip(id) {
+  const r = records.find(x => x.id === id);
+  if (!r?.slip_image) return;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:20px;cursor:zoom-out;';
+  overlay.onclick = () => overlay.remove();
+  overlay.innerHTML = `<div style="position:relative;max-width:480px;width:100%;" onclick="event.stopPropagation()">
+    <img src="${r.slip_image}" style="width:100%;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+    <button onclick="document.body.removeChild(document.body.lastChild)" style="position:absolute;top:-14px;right:-14px;background:#fff;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">✕</button>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
 async function deleteRecord(id) {
   if (!confirm('ลบรายการนี้?')) return;
   const { error } = await sb.from('savings_records').delete().eq('id', id);
