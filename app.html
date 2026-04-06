@@ -449,20 +449,20 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
           <!-- Rate source buttons -->
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
             <span style="font-size:11px;color:var(--text-dim);margin-right:2px;">ดูอัตราจาก:</span>
+            <button type="button" onclick="openRatePopup('rates')"
+              style="padding:5px 10px;border-radius:6px;border:1.5px solid var(--gold);background:var(--gold-bg);
+              color:var(--gold);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
+              💱 ดูอัตราแลกเปลี่ยน
+            </button>
             <button type="button" onclick="openRatePopup('bot')"
               style="padding:5px 10px;border-radius:6px;border:1.5px solid #1a56db;background:#EFF6FF;
               color:#1a56db;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
-              🏦 ธปท. (BOT)
-            </button>
-            <button type="button" onclick="openRatePopup('google')"
-              style="padding:5px 10px;border-radius:6px;border:1.5px solid var(--border-strong);background:var(--surface);
-              color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
-              🔍 Google
+              🏦 BOT
             </button>
             <button type="button" onclick="openRatePopup('xe')"
               style="padding:5px 10px;border-radius:6px;border:1.5px solid var(--border-strong);background:var(--surface);
-              color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
-              💱 XE.com
+              color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;">
+              XE.com
             </button>
             <span id="rateAutoHint" style="font-size:11px;color:var(--success);"></span>
           </div>
@@ -494,7 +494,8 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
                 border-radius:8px;color:var(--text-muted);font-size:14px;cursor:pointer;">✕</button>
             </div>
           </div>
-          <iframe id="ratePopupFrame" src="" style="flex:1;border:none;width:100%;"></iframe>
+          <iframe id="ratePopupFrame" src="" style="flex:1;border:none;width:100%;display:none;"></iframe>
+          <div id="ratePopupHelper" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;overflow-y:auto;"></div>
         </div>
       </div>
 
@@ -587,7 +588,7 @@ let records = [];
 let currentFilter = 'all';
 let editingId = null;
 let selectedAsset = 'GOLD';
-let prices = { gold: null, btc: null };
+let prices = { gold: null, btc: null, usdt: null, usdThb: null };
 
 // ===== INIT =====
 (async () => {
@@ -603,7 +604,9 @@ let prices = { gold: null, btc: null };
   document.getElementById('navUser').textContent = currentUser.user_metadata?.full_name || currentUser.email;
   document.getElementById('buyDate').valueAsDate = new Date();
 
-  await Promise.all([loadRecords(), fetchPrices()]);
+  // โหลด prices ก่อน แล้วค่อย loadRecords เพื่อให้มูลค่าปัจจุบันแสดงทันที
+  await fetchPrices();
+  await loadRecords();
 })();
 
 // ===== FETCH PRICES =====
@@ -655,8 +658,11 @@ async function fetchPrices() {
   } catch(e) { console.warn('Price fetch error', e); }
 
   renderTicker();
-  renderRecords();
-  renderSummary();
+  // re-render ถ้า records โหลดแล้ว (กรณี auto-refresh ราคาทุก 5 นาที)
+  if (records.length > 0) {
+    renderRecords();
+    renderSummary();
+  }
 }
 
 function renderTicker() {
@@ -802,9 +808,9 @@ function renderRecords() {
       <td>${pnlHtml}</td>
       <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--text-muted)" title="${noteDisplay}">${noteDisplay}</td>
       <td style="white-space:nowrap">
-        ${r.slip_image ? `<button class="action-btn" onclick="viewSlip('${r.id}')" title="ดู Slip" style="font-size:18px;">🧾</button>` : ''}
-        <button class="action-btn edit" onclick="openEditModal('${r.id}')" title="แก้ไข">✏️</button>
-        <button class="action-btn" onclick="deleteRecord('${r.id}')" title="ลบ">🗑️</button>
+        ${r.slip_image ? `<button class="action-btn" data-action="slip" data-id="${r.id}" title="ดู Slip" style="font-size:18px;">🧾</button>` : ''}
+        <button class="action-btn edit" data-action="edit" data-id="${r.id}" title="แก้ไข">✏️</button>
+        <button class="action-btn" data-action="delete" data-id="${r.id}" title="ลบ">🗑️</button>
       </td>
     </tr>`;
   }).join('');
@@ -1091,73 +1097,108 @@ async function saveRecord() {
 }
 
 // ===== RATE POPUP =====
-const RATE_SOURCES = {
-  bot:    { title:'🏦 ธนาคารแห่งประเทศไทย (BOT)', url:'https://www.bot.or.th/en/statistics/exchange-rate.html' },
-  google: { title:'🔍 Google — USD/THB', url:'https://www.google.com/search?q=1+usd+to+thb&igu=1' },
-  xe:     { title:'💱 XE Currency Converter', url:'https://www.xe.com/currencyconverter/convert/?Amount=1&From=USD&To=THB' }
-};
-
 function openRatePopup(source) {
-  const src = RATE_SOURCES[source];
-  document.getElementById('ratePopupTitle').textContent = src.title;
+  const overlay = document.getElementById('ratePopupOverlay');
+  overlay.style.display = 'flex';
+
   // sync current rate to popup input
   const cur = document.getElementById('usdtRate').value;
   if (cur) document.getElementById('ratePopupInput').value = cur;
   else if (prices.usdThb) document.getElementById('ratePopupInput').value = prices.usdThb.toFixed(4);
 
-  const overlay = document.getElementById('ratePopupOverlay');
-  overlay.style.display = 'flex';
+  const frame  = document.getElementById('ratePopupFrame');
+  const helper = document.getElementById('ratePopupHelper');
 
-  // BOT blocks iframe — open in new tab instead, show message
-  const frame = document.getElementById('ratePopupFrame');
-  if (source === 'bot') {
+  if (source === 'rates') {
+    // แสดง live rates จาก APIs ที่โหลดแล้ว
     frame.style.display = 'none';
-    // Show helper content inside iframe area
-    const helper = document.getElementById('ratePopupHelper') || (() => {
-      const d = document.createElement('div');
-      d.id = 'ratePopupHelper';
-      d.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px;text-align:center;';
-      frame.parentNode.appendChild(d);
-      return d;
-    })();
     helper.style.display = 'flex';
+    document.getElementById('ratePopupTitle').textContent = '💱 อัตราแลกเปลี่ยน USD/THB';
+    renderRateHelper(helper);
+  } else if (source === 'bot') {
+    frame.style.display = 'none';
+    helper.style.display = 'flex';
+    document.getElementById('ratePopupTitle').textContent = '🏦 ธนาคารแห่งประเทศไทย (BOT)';
     helper.innerHTML = `
-      <div style="font-size:48px;">🏦</div>
-      <div style="font-size:16px;font-weight:700;color:var(--text);">ธนาคารแห่งประเทศไทย</div>
-      <div style="font-size:14px;color:var(--text-muted);max-width:320px;line-height:1.6;">
-        เว็บ BOT ไม่รองรับการฝัง iframe<br>กดปุ่มด้านล่างเพื่อเปิดในแท็บใหม่<br>แล้วกลับมากรอกอัตราที่ช่อง USD/THB ด้านบน
-      </div>
-      <a href="https://www.bot.or.th/en/statistics/exchange-rate.html" target="_blank"
-        style="padding:12px 24px;background:var(--gold);color:#fff;border-radius:10px;
-        text-decoration:none;font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;">
-        🔗 เปิดเว็บ BOT
-      </a>
-      <div style="font-size:12px;color:var(--text-dim);">อัตราอ้างอิงของ ธปท. อัปเดตทุกวันทำการ</div>
-      <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:16px 24px;margin-top:8px;">
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">หรือดูอัตราจาก API (ล่าสุด)</div>
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--gold);">
-          ${prices.usdThb ? prices.usdThb.toFixed(4) + ' ฿' : 'กำลังโหลด...'}
+      <div style="text-align:center;padding:24px;">
+        <div style="font-size:48px;margin-bottom:12px;">🏦</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:8px;">ธนาคารแห่งประเทศไทย</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;">
+          เว็บ BOT ไม่รองรับการฝัง iframe<br>กดปุ่มด้านล่างเพื่อเปิดในแท็บใหม่
         </div>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">แหล่งที่มา: Frankfurter API (ECB)</div>
-        ${prices.usdThb ? `<button onclick="document.getElementById('ratePopupInput').value='${prices.usdThb.toFixed(4)}';applyRateFromPopup();"
-          style="margin-top:10px;padding:8px 16px;background:var(--gold-bg);border:1.5px solid var(--gold-border);
-          border-radius:8px;color:var(--gold);font-weight:700;font-size:13px;cursor:pointer;">
-          ใช้อัตรานี้ ${prices.usdThb.toFixed(4)} ฿
-        </button>` : ''}
+        <a href="https://www.bot.or.th/en/statistics/exchange-rate.html" target="_blank"
+          style="display:inline-block;padding:12px 24px;background:var(--gold);color:#fff;
+          border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;margin-bottom:24px;">
+          🔗 เปิดเว็บ BOT
+        </a>
+      </div>
+      <div style="width:100%;max-width:360px;">
+        ${renderRateCards()}
       </div>`;
   } else {
-    const helper = document.getElementById('ratePopupHelper');
-    if (helper) helper.style.display = 'none';
+    const urls = {
+      google: 'https://www.google.com/search?q=1+usd+to+thb&igu=1',
+      xe:     'https://www.xe.com/currencyconverter/convert/?Amount=1&From=USD&To=THB'
+    };
+    helper.style.display = 'none';
     frame.style.display = 'block';
-    frame.src = src.url;
+    frame.src = urls[source] || '';
+    document.getElementById('ratePopupTitle').textContent = source === 'google' ? '🔍 Google — USD/THB' : '💱 XE.com';
   }
+}
+
+function renderRateCards() {
+  const usdthb = prices.usdThb;
+  const btcUsd = prices.btc?.usd;
+  const now    = new Date().toLocaleTimeString('th-TH');
+  return `
+    <div style="background:var(--gold-bg);border:1.5px solid var(--gold-border);border-radius:12px;padding:20px;text-align:center;">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;font-weight:600;letter-spacing:1px;">USD / THB</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:36px;font-weight:700;color:var(--gold);">
+        ${usdthb ? usdthb.toFixed(4) : '—'}
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Frankfurter (ECB) · อัปเดต ${now}</div>
+      ${usdthb ? `
+      <button onclick="document.getElementById('ratePopupInput').value='${usdthb.toFixed(4)}';applyRateFromPopup();"
+        style="margin-top:14px;padding:10px 24px;background:var(--gold);border:none;border-radius:8px;
+        color:#fff;font-weight:700;font-size:14px;cursor:pointer;width:100%;">
+        ✓ ใช้อัตรานี้ ${usdthb.toFixed(4)} ฿
+      </button>` : '<div style="color:var(--text-muted);margin-top:12px;font-size:13px;">กำลังโหลด...</div>'}
+    </div>`;
+}
+
+function renderRateHelper(helper) {
+  helper.innerHTML = `
+    <div style="width:100%;max-width:380px;display:flex;flex-direction:column;gap:12px;">
+      ${renderRateCards()}
+      <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:16px;">
+        <div style="font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:10px;">แหล่งอ้างอิงอื่น</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <a href="https://www.bot.or.th/en/statistics/exchange-rate.html" target="_blank"
+            style="flex:1;padding:10px;background:#fff;border:1.5px solid #1a56db;border-radius:8px;
+            color:#1a56db;font-weight:600;font-size:13px;text-decoration:none;text-align:center;">
+            🏦 ธปท. BOT
+          </a>
+          <a href="https://www.google.com/search?q=1+usd+to+thb" target="_blank"
+            style="flex:1;padding:10px;background:#fff;border:1.5px solid var(--border-strong);border-radius:8px;
+            color:var(--text);font-weight:600;font-size:13px;text-decoration:none;text-align:center;">
+            🔍 Google
+          </a>
+          <a href="https://www.xe.com/currencyconverter/convert/?Amount=1&From=USD&To=THB" target="_blank"
+            style="flex:1;padding:10px;background:#fff;border:1.5px solid var(--border-strong);border-radius:8px;
+            color:var(--text);font-weight:600;font-size:13px;text-decoration:none;text-align:center;">
+            💱 XE.com
+          </a>
+        </div>
+      </div>
+    </div>`;
 }
 
 function applyRateFromPopup() {
   const rate = parseFloat(document.getElementById('ratePopupInput').value);
-  if (!rate || rate <= 0) { alert('กรุณากรอกอัตราแลกเปลี่ยน'); return; }
+  if (!rate || rate <= 0) { showToast('กรุณากรอกอัตราแลกเปลี่ยน', 'error'); return; }
   document.getElementById('usdtRate').value = rate.toFixed(4);
-  document.getElementById('rateAutoHint').textContent = `✓ ใช้อัตรา ${rate.toFixed(4)} ฿`;
+  document.getElementById('rateAutoHint').textContent = `✓ ใช้ ${rate.toFixed(4)} ฿`;
   closeRatePopup();
   calcPreview();
 }
@@ -1167,8 +1208,8 @@ function closeRatePopup() {
   document.getElementById('ratePopupFrame').src = '';
 }
 
-// Close popup on overlay click
-document.getElementById('ratePopupOverlay')?.addEventListener('click', function(e) {
+// Close rate popup on overlay click
+document.getElementById('ratePopupOverlay').addEventListener('click', function(e) {
   if (e.target === this) closeRatePopup();
 });
 
@@ -1252,7 +1293,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
-// ===== VIEW SLIP =====
+// ===== TABLE ACTION DELEGATION (ผูกกับ document เพื่อ survive innerHTML replace) =====
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const id     = btn.dataset.id;
+  const action = btn.dataset.action;
+  if (action === 'edit')   openEditModal(id);
+  if (action === 'delete') deleteRecord(id);
+  if (action === 'slip')   viewSlip(id);
+});
 function viewSlip(id) {
   const r = records.find(x => x.id === id);
   if (!r?.slip_image) return;
