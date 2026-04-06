@@ -610,8 +610,8 @@ let prices = { gold: null, btc: null, usdt: null, usdThb: null };
 })();
 
 // ===== FETCH PRICES =====
-// สูตร TradingView: TVC:GOLD / 31.1034 * 15.244 * 0.965 * OANDA:USDTHB
 async function fetchPrices() {
+  // --- BTC + USD/THB ---
   try {
     const [cryptoRes, fxRes] = await Promise.all([
       fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,tether&vs_currencies=thb,usd&include_24hr_change=true'),
@@ -620,45 +620,41 @@ async function fetchPrices() {
     const cryptoData = await cryptoRes.json();
     const fxData     = await fxRes.json();
 
-    // USD/THB
-    const usdThb = fxData?.rates?.THB;
-    prices.usdThb = usdThb;
-
-    // BTC
-    prices.btc = {
-      thb:    cryptoData.bitcoin?.thb,
-      usd:    cryptoData.bitcoin?.usd,
-      change: cryptoData.bitcoin?.thb_24h_change?.toFixed(2)
+    prices.usdThb = fxData?.rates?.THB || null;
+    prices.usdt   = { thb: prices.usdThb, usd: 1 };
+    prices.btc    = {
+      thb:    cryptoData.bitcoin?.thb    || null,
+      usd:    cryptoData.bitcoin?.usd    || null,
+      change: cryptoData.bitcoin?.thb_24h_change?.toFixed(2) || '0'
     };
+    console.log('✅ BTC/USD/THB loaded:', prices.btc.thb, '฿ | rate:', prices.usdThb);
+  } catch(e) { console.warn('❌ BTC/FX fetch failed:', e); }
 
-    // USDT ≈ 1 USD (แต่ดึงราคาจริงมาด้วย)
-    prices.usdt = { thb: usdThb, usd: 1 };
-
-    // GOLD — XAU/USD จาก metals API ผ่าน frankfurter fallback
-    // ใช้ PAXG จาก CoinGecko แทน (pax-gold = 1 troy oz gold)
-    const paxRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=usd');
+  // --- GOLD (PAXG) ---
+  try {
+    const paxRes  = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=usd');
     const paxData = await paxRes.json();
-    const xauUsd = paxData['pax-gold']?.usd;
+    const xauUsd  = paxData['pax-gold']?.usd;
+    const usdThb  = prices.usdThb;
 
     if (xauUsd && usdThb) {
       const perGram  = xauUsd / 31.1034 * usdThb;
       const sellBaht = perGram * 15.244 * 0.965;
-      const buyBaht  = sellBaht - 200;
       prices.gold = {
+        thb:           Math.round(perGram),   // ← ใช้ calculate มูลค่าปัจจุบัน (฿/กรัม)
         sell_per_gram: Math.round(perGram),
         buy_per_gram:  Math.round(perGram * 0.997),
         sell_baht:     Math.round(sellBaht),
-        buy_baht:      Math.round(buyBaht),
-        thb:           Math.round(perGram),
+        buy_baht:      Math.round(sellBaht - 200),
         xau_usd:       Math.round(xauUsd).toLocaleString(),
-        usd_thb:       usdThb?.toFixed(2),
-        source:        `XAU $${Math.round(xauUsd).toLocaleString()} · USD/THB ${usdThb?.toFixed(2)}`
+        usd_thb:       usdThb.toFixed(2),
+        source:        `XAU $${Math.round(xauUsd).toLocaleString()} · USD/THB ${usdThb.toFixed(2)}`
       };
+      console.log('✅ GOLD loaded:', prices.gold.thb, '฿/g');
     }
-  } catch(e) { console.warn('Price fetch error', e); }
+  } catch(e) { console.warn('❌ GOLD fetch failed:', e); }
 
   renderTicker();
-  // re-render ถ้า records โหลดแล้ว (กรณี auto-refresh ราคาทุก 5 นาที)
   if (records.length > 0) {
     renderRecords();
     renderSummary();
@@ -808,9 +804,9 @@ function renderRecords() {
       <td>${pnlHtml}</td>
       <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--text-muted)" title="${noteDisplay}">${noteDisplay}</td>
       <td style="white-space:nowrap">
-        ${r.slip_image ? `<button class="action-btn" data-action="slip" data-id="${r.id}" title="ดู Slip" style="font-size:18px;">🧾</button>` : ''}
-        <button class="action-btn edit" data-action="edit" data-id="${r.id}" title="แก้ไข">✏️</button>
-        <button class="action-btn" data-action="delete" data-id="${r.id}" title="ลบ">🗑️</button>
+        ${r.slip_image ? `<button class="action-btn" onclick="viewSlip(${JSON.stringify(r.id)})" title="ดู Slip" style="font-size:18px;">🧾</button>` : ''}
+        <button class="action-btn edit" onclick="openEditModal(${JSON.stringify(r.id)})" title="แก้ไข">✏️</button>
+        <button class="action-btn" onclick="deleteRecord(${JSON.stringify(r.id)})" title="ลบ">🗑️</button>
       </td>
     </tr>`;
   }).join('');
