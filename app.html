@@ -810,10 +810,28 @@ function renderRecords() {
       <td>${currentValHtml}</td>
       <td>${pnlHtml}</td>
       <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--text-muted)" title="${noteDisplay}">${noteDisplay}</td>
-      <td style="white-space:nowrap">
-        ${r.slip_image ? `<button class="action-btn" onclick="viewSlip(${JSON.stringify(r.id)})" title="ดู Slip" style="font-size:18px;">🧾</button>` : ''}
-        <button class="action-btn edit" onclick="openEditModal(${JSON.stringify(r.id)})" title="แก้ไข">✏️</button>
-        <button class="action-btn" onclick="deleteRecord(${JSON.stringify(r.id)})" title="ลบ">🗑️</button>
+      <td style="white-space:nowrap;min-width:120px;">
+        <div style="display:flex;gap:6px;align-items:center;">
+          ${r.slip_image ? `<button onclick="viewSlip(${JSON.stringify(r.id)})"
+            style="padding:6px 10px;border-radius:7px;border:1.5px solid var(--border);
+            background:var(--surface2);cursor:pointer;font-size:13px;display:flex;align-items:center;gap:4px;color:var(--text-muted);">
+            🧾
+          </button>` : ''}
+          <button onclick="openEditModal(${JSON.stringify(r.id)})"
+            style="padding:6px 12px;border-radius:7px;border:1.5px solid var(--gold-border);
+            background:var(--gold-bg);color:var(--gold);font-size:13px;font-weight:600;
+            cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'Noto Sans Thai',sans-serif;
+            white-space:nowrap;">
+            ✏️ แก้ไข
+          </button>
+          <button onclick="deleteRecord(${JSON.stringify(r.id)})"
+            style="padding:6px 12px;border-radius:7px;border:1.5px solid var(--error-border);
+            background:var(--error-bg);color:var(--error);font-size:13px;font-weight:600;
+            cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'Noto Sans Thai',sans-serif;
+            white-space:nowrap;">
+            🗑️ ลบ
+          </button>
+        </div>
       </td>
     </tr>`;
   }).join('');
@@ -1320,11 +1338,49 @@ function viewSlip(id) {
 }
 
 async function deleteRecord(id) {
-  if (!confirm('ลบรายการนี้?')) return;
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+
+  // Custom confirm dialog
+  const confirmed = await showConfirmDialog(
+    '🗑️ ลบรายการนี้?',
+    `${r.asset_type === 'GOLD' ? '🥇 ทอง' : r.asset_type === 'BTC' ? '₿ Bitcoin' : '🪙 ' + (r.custom_asset||'')} · ${r.amount_paid.toLocaleString()} ฿ · ${new Date(r.buy_date).toLocaleDateString('th-TH')}`,
+    'ลบ', 'ยกเลิก'
+  );
+  if (!confirmed) return;
+
   const { error } = await sb.from('savings_records').delete().eq('id', id);
-  if (error) return showToast('ลบไม่สำเร็จ', 'error');
+  if (error) return showToast('ลบไม่สำเร็จ: ' + error.message, 'error');
   showToast('🗑️ ลบรายการแล้ว', 'success');
   await loadRecords();
+}
+
+function showConfirmDialog(title, desc, confirmLabel, cancelLabel) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:900;background:rgba(26,25,22,0.45);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:#fff;border:1.5px solid var(--border);border-radius:16px;
+        padding:28px;max-width:360px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.15);
+        animation:slideUp 0.2s ease;text-align:center;">
+        <div style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:8px;">${title}</div>
+        <div style="font-size:14px;color:var(--text-muted);margin-bottom:24px;line-height:1.6;">${desc}</div>
+        <div style="display:flex;gap:10px;">
+          <button id="_cancelBtn" style="flex:1;padding:12px;border-radius:10px;
+            border:1.5px solid var(--border-strong);background:var(--surface2);
+            color:var(--text-muted);font-size:15px;font-weight:600;cursor:pointer;
+            font-family:'Noto Sans Thai',sans-serif;">${cancelLabel}</button>
+          <button id="_confirmBtn" style="flex:1;padding:12px;border-radius:10px;
+            border:none;background:var(--error);color:#fff;
+            font-size:15px;font-weight:700;cursor:pointer;
+            font-family:'Noto Sans Thai',sans-serif;">${confirmLabel}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#_confirmBtn').onclick = () => { overlay.remove(); resolve(true); };
+    overlay.querySelector('#_cancelBtn').onclick  = () => { overlay.remove(); resolve(false); };
+    overlay.onclick = e => { if (e.target === overlay) { overlay.remove(); resolve(false); } };
+  });
 }
 
 // ===== LOGOUT =====
