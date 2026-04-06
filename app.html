@@ -501,10 +501,11 @@ const GOLD_PROXY_URL = 'https://script.google.com/macros/s/AKfycbzHz2yncnH65IJtr
 async function fetchPrices() {
   try {
     // BTC — CoinGecko (ฟรี ไม่ต้อง key)
-    const btcRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=thb&include_24hr_change=true');
+    const btcRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=thb,usd&include_24hr_change=true');
     const btcData = await btcRes.json();
     prices.btc = {
       thb: btcData.bitcoin.thb,
+      usd: btcData.bitcoin.usd,
       change: btcData.bitcoin.thb_24h_change?.toFixed(2)
     };
   } catch(e) { console.warn('BTC price failed', e); }
@@ -569,10 +570,15 @@ function renderTicker() {
     const chg = parseFloat(prices.btc.change);
     const cls = chg >= 0 ? 'up' : 'down';
     const sign = chg >= 0 ? '▲' : '▼';
-    html.push(`<div class="ticker-item">
-      <span class="ticker-badge badge-btc">₿ BTC</span>
-      <span class="ticker-val">${prices.btc.thb?.toLocaleString()} ฿</span>
-      <span class="ticker-change ${cls}">${sign}${Math.abs(chg)}%</span>
+    html.push(`<div class="ticker-item" style="flex-direction:column;align-items:flex-start;gap:2px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="ticker-badge badge-btc">₿ BTC</span>
+        <span class="ticker-change ${cls}">${sign}${Math.abs(chg)}%</span>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:2px;">
+        <span style="font-size:11px;color:var(--text-muted)">THB: <span class="ticker-val" style="font-size:13px;color:var(--btc)">${prices.btc.thb?.toLocaleString()} ฿</span></span>
+        <span style="font-size:11px;color:var(--text-muted)">USD: <span class="ticker-val" style="font-size:13px;color:var(--btc)">$${prices.btc.usd?.toLocaleString()}</span></span>
+      </div>
     </div>`);
   }
 
