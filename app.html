@@ -49,7 +49,7 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
 .btn-sm:hover { border-color:var(--gold); color:var(--gold); background:var(--gold-bg); }
 
 /* ===== LAYOUT ===== */
-.main { max-width:980px; margin:0 auto; padding:28px 20px 80px; }
+.main { max-width:1200px; margin:0 auto; padding:28px 20px 80px; }
 
 /* ===== TICKER ===== */
 .ticker-bar {
@@ -127,16 +127,19 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
 .filter-tab.active { border-color:var(--gold); background:var(--gold-bg); color:var(--gold); font-weight:600; }
 
 /* ===== RECORDS TABLE ===== */
-.records-wrap { background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); }
-.records-table { width:100%; border-collapse:collapse; }
+.records-wrap {
+  background:var(--surface); border:1.5px solid var(--border);
+  border-radius:var(--radius); overflow-x:auto; box-shadow:var(--shadow);
+}
+.records-table { width:100%; border-collapse:collapse; min-width:900px; }
 .records-table th {
-  padding:14px 18px; text-align:left;
+  padding:14px 16px; text-align:left;
   font-size:12px; color:var(--text-dim); font-weight:700;
   text-transform:uppercase; letter-spacing:0.8px;
   background:var(--surface2); border-bottom:1.5px solid var(--border); white-space:nowrap;
 }
 .records-table td {
-  padding:16px 18px; font-size:15px;
+  padding:14px 16px; font-size:14px;
   border-bottom:1px solid var(--border); vertical-align:middle;
 }
 .records-table tr:last-child td { border-bottom:none; }
@@ -293,7 +296,7 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
 </nav>
 
 <!-- PRICE TICKER -->
-<div style="max-width:900px;margin:20px auto 0;padding:0 16px;">
+<div style="max-width:1200px;margin:20px auto 0;padding:0 20px;">
   <div class="ticker-bar" id="tickerBar">
     <span class="ticker-loading">⏳ กำลังดึงราคาตลาด...</span>
   </div>
@@ -349,6 +352,7 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
     <table class="records-table">
       <thead>
         <tr>
+          <th style="width:160px;">จัดการ</th>
           <th>วันที่</th>
           <th>สินทรัพย์</th>
           <th>ต้นทุน (บาท)</th>
@@ -356,13 +360,13 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
           <th>ราคาซื้อ/หน่วย</th>
           <th>มูลค่าปัจจุบัน</th>
           <th>กำไร/ขาดทุน</th>
+          <th>แพลตฟอร์ม</th>
           <th>หมายเหตุ</th>
-          <th></th>
         </tr>
       </thead>
       <tbody id="recordsBody">
         <tr>
-          <td colspan="9">
+          <td colspan="10">
             <div class="empty-state">
               <div class="icon">📋</div>
               <p>ยังไม่มีบันทึกการออม กดปุ่ม "+ เพิ่มรายการ" เพื่อเริ่มต้น</p>
@@ -736,7 +740,7 @@ function renderRecords() {
     ? `<img src="https://cdn-icons-png.flaticon.com/512/5968/5968260.png" style="width:40px;height:40px;opacity:0.4;">`
     : '📋';
   document.getElementById('recordsBody').innerHTML = `
-    <tr><td colspan="9">
+    <tr><td colspan="10">
       <div class="empty-state">
         <div class="icon">${emptyIcon}</div>
         <p>ยังไม่มีรายการ</p>
@@ -802,6 +806,27 @@ function renderRecords() {
     }
 
     return `<tr>
+      <td style="white-space:nowrap;">
+        <div style="display:flex;gap:5px;align-items:center;">
+          <button onclick="openEditModal(${JSON.stringify(r.id)})"
+            style="padding:7px 13px;border-radius:8px;border:1.5px solid var(--gold-border);
+            background:var(--gold-bg);color:var(--gold);font-size:13px;font-weight:700;
+            cursor:pointer;font-family:'Noto Sans Thai',sans-serif;white-space:nowrap;
+            display:flex;align-items:center;gap:4px;">
+            ✏️ แก้ไข
+          </button>
+          <button onclick="deleteRecord(${JSON.stringify(r.id)})"
+            style="padding:7px 13px;border-radius:8px;border:1.5px solid var(--error-border);
+            background:var(--error-bg);color:var(--error);font-size:13px;font-weight:700;
+            cursor:pointer;font-family:'Noto Sans Thai',sans-serif;white-space:nowrap;
+            display:flex;align-items:center;gap:4px;">
+            🗑️ ลบ
+          </button>
+          ${r.slip_image ? `<button onclick="viewSlip(${JSON.stringify(r.id)})"
+            style="padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);
+            background:var(--surface2);cursor:pointer;font-size:15px;">🧾</button>` : ''}
+        </div>
+      </td>
       <td style="white-space:nowrap;color:var(--text-muted);font-size:13px">${dateStr}</td>
       <td><span class="asset-badge ${assetClass}">${assetIcon} ${assetName}</span></td>
       <td>${costDisplay}</td>
@@ -809,30 +834,8 @@ function renderRecords() {
       <td><span class="mono" style="font-size:13px">${r.price_per_unit ? Number(r.price_per_unit).toLocaleString('th-TH') : '—'}</span></td>
       <td>${currentValHtml}</td>
       <td>${pnlHtml}</td>
-      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--text-muted)" title="${noteDisplay}">${noteDisplay}</td>
-      <td style="white-space:nowrap;min-width:120px;">
-        <div style="display:flex;gap:6px;align-items:center;">
-          ${r.slip_image ? `<button onclick="viewSlip(${JSON.stringify(r.id)})"
-            style="padding:6px 10px;border-radius:7px;border:1.5px solid var(--border);
-            background:var(--surface2);cursor:pointer;font-size:13px;display:flex;align-items:center;gap:4px;color:var(--text-muted);">
-            🧾
-          </button>` : ''}
-          <button onclick="openEditModal(${JSON.stringify(r.id)})"
-            style="padding:6px 12px;border-radius:7px;border:1.5px solid var(--gold-border);
-            background:var(--gold-bg);color:var(--gold);font-size:13px;font-weight:600;
-            cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'Noto Sans Thai',sans-serif;
-            white-space:nowrap;">
-            ✏️ แก้ไข
-          </button>
-          <button onclick="deleteRecord(${JSON.stringify(r.id)})"
-            style="padding:6px 12px;border-radius:7px;border:1.5px solid var(--error-border);
-            background:var(--error-bg);color:var(--error);font-size:13px;font-weight:600;
-            cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'Noto Sans Thai',sans-serif;
-            white-space:nowrap;">
-            🗑️ ลบ
-          </button>
-        </div>
-      </td>
+      <td style="font-size:13px;color:var(--text-muted);white-space:nowrap;">${r.platform || '—'}</td>
+      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--text-muted)" title="${noteDisplay}">${noteDisplay}</td>
     </tr>`;
   }).join('');
   document.getElementById('recordsBody').innerHTML = rows;
