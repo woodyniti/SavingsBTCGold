@@ -708,30 +708,33 @@ let prices = { gold: null, btc: null, usdt: null, usdThb: null };
 
 // ===== FETCH PRICES =====
 async function fetchPrices() {
-  // --- BTC + USDT(≈USD/THB) จาก CoinGecko ในครั้งเดียว ---
   try {
     const cryptoRes  = await fetch(
-      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,tether,pax-gold&vs_currencies=thb,usd&include_24hr_change=true'
+      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,pax-gold&vs_currencies=thb,usd&include_24hr_change=true'
     );
     const cryptoData = await cryptoRes.json();
 
-    // USD/THB จาก USDT/THB (tether ≈ 1 USD)
-    const usdThb = cryptoData.tether?.thb || null;
-    prices.usdThb = usdThb;
-    prices.usdt   = { thb: usdThb, usd: 1 };
+    // คำนวณ USD/THB จาก BTC_THB ÷ BTC_USD → แม่นยำกว่า USDT
+    const btcThb = cryptoData.bitcoin?.thb;
+    const btcUsd = cryptoData.bitcoin?.usd;
+    if (btcThb && btcUsd) {
+      prices.usdThb = btcThb / btcUsd;
+      console.log('✅ USD/THB (จาก BTC):', prices.usdThb.toFixed(4));
+    }
 
     // BTC
     if (cryptoData.bitcoin) {
       prices.btc = {
-        thb:    cryptoData.bitcoin.thb    || null,
-        usd:    cryptoData.bitcoin.usd    || null,
+        thb:    btcThb  || null,
+        usd:    btcUsd  || null,
         change: cryptoData.bitcoin.thb_24h_change?.toFixed(2) || '0'
       };
-      console.log('✅ BTC:', prices.btc.thb?.toLocaleString(), '฿ | USD/THB:', usdThb?.toFixed(2));
+      console.log('✅ BTC:', prices.btc.thb?.toLocaleString(), '฿ |', prices.btc.usd?.toLocaleString(), 'USD');
     }
 
-    // GOLD — PAXG (1 troy oz) → THB/กรัม
+    // GOLD — PAXG/USD × USD/THB → THB/กรัม
     const xauUsd = cryptoData['pax-gold']?.usd;
+    const usdThb = prices.usdThb;
     if (xauUsd && usdThb) {
       const perGram  = xauUsd / 31.1034 * usdThb;
       const sellBaht = perGram * 15.244 * 0.965;
@@ -745,7 +748,7 @@ async function fetchPrices() {
         usd_thb:       usdThb.toFixed(2),
         source:        `XAU $${Math.round(xauUsd).toLocaleString()} · USD/THB ${usdThb.toFixed(2)}`
       };
-      console.log('✅ GOLD:', prices.gold.thb?.toLocaleString(), '฿/g');
+      console.log('✅ GOLD:', prices.gold.thb?.toLocaleString(), '฿/g | XAU:', xauUsd, '| rate:', usdThb.toFixed(2));
     }
 
   } catch(e) {
