@@ -13,6 +13,12 @@
 :root {
   --gold: #B8860B; --gold-light: #F5C842; --gold-bg: #FFFBEB; --gold-border: #FDE68A;
   --btc: #E07B00; --btc-bg: #FFF7ED; --btc-border: #FED7AA;
+  --silver-c: #6B7280; --silver-bg: #F9FAFB; --silver-border: #D1D5DB;
+  --stock: #2563EB; --stock-bg: #EFF6FF; --stock-border: #BFDBFE;
+  --ustock: #7C3AED; --ustock-bg: #F5F3FF; --ustock-border: #DDD6FE;
+  --fund: #0891B2; --fund-bg: #ECFEFF; --fund-border: #A5F3FC;
+  --bond: #059669; --bond-bg: #ECFDF5; --bond-border: #A7F3D0;
+  --property: #DC2626; --property-bg: #FEF2F2; --property-border: #FECACA;
   --bg: #F8F7F4; --surface: #FFFFFF; --surface2: #F3F2EF;
   --border: #E8E5DF; --border-strong: #D1CEC6;
   --text: #1A1916; --text-muted: #6B6860; --text-dim: #9C9A94;
@@ -152,9 +158,15 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
   padding:5px 12px; border-radius:6px; font-size:13px; font-weight:600;
   letter-spacing:0.3px;
 }
-.asset-gold { background:var(--gold-bg); color:var(--gold); border:1.5px solid var(--gold-border); }
-.asset-btc { background:var(--btc-bg); color:var(--btc); border:1.5px solid var(--btc-border); }
-.asset-other { background:var(--surface2); color:var(--text-muted); border:1.5px solid var(--border); }
+.asset-gold   { background:var(--gold-bg);    color:var(--gold);    border:1.5px solid var(--gold-border); }
+.asset-btc    { background:var(--btc-bg);     color:var(--btc);     border:1.5px solid var(--btc-border); }
+.asset-silver { background:var(--silver-bg);  color:var(--silver-c);border:1.5px solid var(--silver-border); }
+.asset-stock  { background:var(--stock-bg);   color:var(--stock);   border:1.5px solid var(--stock-border); }
+.asset-ustock { background:var(--ustock-bg);  color:var(--ustock);  border:1.5px solid var(--ustock-border); }
+.asset-fund   { background:var(--fund-bg);    color:var(--fund);    border:1.5px solid var(--fund-border); }
+.asset-bond   { background:var(--bond-bg);    color:var(--bond);    border:1.5px solid var(--bond-border); }
+.asset-prop   { background:var(--property-bg);color:var(--property);border:1.5px solid var(--property-border); }
+.asset-other  { background:var(--surface2);   color:var(--text-muted);border:1.5px solid var(--border); }
 
 .mono { font-family:'IBM Plex Mono',monospace; font-size:14px; }
 .pnl-pos { color:var(--success); font-weight:600; font-family:'IBM Plex Mono',monospace; font-size:14px; }
@@ -218,17 +230,23 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
 .form-group textarea { resize:vertical; min-height:80px; }
 .form-hint { font-size:12px; color:var(--text-dim); margin-top:6px; }
 
-.asset-selector { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
+.asset-selector { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px; }
 .asset-opt {
-  padding:14px 10px; border-radius:10px; border:2px solid var(--border);
+  padding:10px 6px; border-radius:10px; border:2px solid var(--border);
   background:var(--surface); cursor:pointer; text-align:center; transition:all 0.15s;
-  font-family:'Noto Sans Thai',sans-serif; color:var(--text-muted); font-size:14px; font-weight:500;
+  font-family:'Noto Sans Thai',sans-serif; color:var(--text-muted); font-size:12px; font-weight:500;
 }
-.asset-opt .emoji { font-size:24px; display:block; margin-bottom:6px; }
+.asset-opt .emoji { font-size:20px; display:block; margin-bottom:4px; }
 .asset-opt:hover { border-color:var(--border-strong); background:var(--surface2); }
-.asset-opt.selected-gold { border-color:var(--gold); background:var(--gold-bg); color:var(--gold); }
-.asset-opt.selected-btc { border-color:var(--btc); background:var(--btc-bg); color:var(--btc); }
-.asset-opt.selected-other { border-color:var(--border-strong); background:var(--surface2); color:var(--text); }
+.asset-opt.selected-gold   { border-color:var(--gold);    background:var(--gold-bg);    color:var(--gold); }
+.asset-opt.selected-btc    { border-color:var(--btc);     background:var(--btc-bg);     color:var(--btc); }
+.asset-opt.selected-silver { border-color:var(--silver-c);background:var(--silver-bg);  color:var(--silver-c); }
+.asset-opt.selected-stock  { border-color:var(--stock);   background:var(--stock-bg);   color:var(--stock); }
+.asset-opt.selected-ustock { border-color:var(--ustock);  background:var(--ustock-bg);  color:var(--ustock); }
+.asset-opt.selected-fund   { border-color:var(--fund);    background:var(--fund-bg);    color:var(--fund); }
+.asset-opt.selected-bond   { border-color:var(--bond);    background:var(--bond-bg);    color:var(--bond); }
+.asset-opt.selected-prop   { border-color:var(--property);background:var(--property-bg);color:var(--property); }
+.asset-opt.selected-other  { border-color:var(--border-strong); background:var(--surface2); color:var(--text); }
 
 .btn-full {
   width:100%; padding:13px; border-radius:var(--radius-sm); border:none;
@@ -389,8 +407,14 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
   <!-- FILTER TABS -->
   <div class="filter-tabs">
     <button class="filter-tab active" onclick="setFilter('all', this)">ทั้งหมด</button>
-    <button class="filter-tab" onclick="setFilter('GOLD', this)"><img src="https://cdn-icons-png.flaticon.com/512/5699/5699560.png" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;">ทอง</button>
-    <button class="filter-tab" onclick="setFilter('BTC', this)"><img src="https://cdn-icons-png.flaticon.com/512/5968/5968260.png" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;">Bitcoin</button>
+    <button class="filter-tab" onclick="setFilter('GOLD', this)"><img src="https://cdn-icons-png.flaticon.com/512/5699/5699560.png" style="width:13px;height:13px;vertical-align:middle;margin-right:3px;">ทอง</button>
+    <button class="filter-tab" onclick="setFilter('SILVER', this)">🥈 เงิน</button>
+    <button class="filter-tab" onclick="setFilter('BTC', this)"><img src="https://cdn-icons-png.flaticon.com/512/5968/5968260.png" style="width:13px;height:13px;vertical-align:middle;margin-right:3px;">BTC</button>
+    <button class="filter-tab" onclick="setFilter('SET', this)">📈 หุ้นไทย</button>
+    <button class="filter-tab" onclick="setFilter('USSTOCK', this)">🇺🇸 หุ้น US</button>
+    <button class="filter-tab" onclick="setFilter('FUND', this)">💼 กองทุน</button>
+    <button class="filter-tab" onclick="setFilter('BOND', this)">📜 พันธบัตร</button>
+    <button class="filter-tab" onclick="setFilter('PROPERTY', this)">🏠 อสังหาฯ</button>
     <button class="filter-tab" onclick="setFilter('OTHER', this)">🪙 อื่นๆ</button>
   </div>
 
@@ -440,13 +464,31 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
       <!-- Asset Type -->
       <div style="margin-bottom:6px;"><label style="font-size:12px;color:var(--text-muted);">ประเภทสินทรัพย์</label></div>
       <div class="asset-selector">
-        <button class="asset-opt selected-gold" onclick="selectAsset('GOLD', this)" id="optGold">
-          <span class="emoji"><img src="https://cdn-icons-png.flaticon.com/512/5699/5699560.png" style="width:28px;height:28px;object-fit:contain;"></span>ทอง
+        <button class="asset-opt selected-gold" onclick="selectAsset('GOLD', this)" id="optGOLD">
+          <span class="emoji"><img src="https://cdn-icons-png.flaticon.com/512/5699/5699560.png" style="width:24px;height:24px;object-fit:contain;"></span>ทองคำ
+        </button>
+        <button class="asset-opt" onclick="selectAsset('SILVER', this)" id="optSILVER">
+          <span class="emoji">🥈</span>เงิน
         </button>
         <button class="asset-opt" onclick="selectAsset('BTC', this)" id="optBTC">
-          <span class="emoji"><img src="https://cdn-icons-png.flaticon.com/512/5968/5968260.png" style="width:28px;height:28px;object-fit:contain;"></span>Bitcoin
+          <span class="emoji"><img src="https://cdn-icons-png.flaticon.com/512/5968/5968260.png" style="width:24px;height:24px;object-fit:contain;"></span>Bitcoin
         </button>
-        <button class="asset-opt" onclick="selectAsset('OTHER', this)" id="optOther">
+        <button class="asset-opt" onclick="selectAsset('SET', this)" id="optSET">
+          <span class="emoji">📈</span>หุ้นไทย
+        </button>
+        <button class="asset-opt" onclick="selectAsset('USSTOCK', this)" id="optUSSTOCK">
+          <span class="emoji">🇺🇸</span>หุ้น US
+        </button>
+        <button class="asset-opt" onclick="selectAsset('FUND', this)" id="optFUND">
+          <span class="emoji">💼</span>กองทุน
+        </button>
+        <button class="asset-opt" onclick="selectAsset('BOND', this)" id="optBOND">
+          <span class="emoji">📜</span>พันธบัตร
+        </button>
+        <button class="asset-opt" onclick="selectAsset('PROPERTY', this)" id="optPROPERTY">
+          <span class="emoji">🏠</span>อสังหาฯ
+        </button>
+        <button class="asset-opt" onclick="selectAsset('OTHER', this)" id="optOTHER">
           <span class="emoji">🪙</span>อื่นๆ
         </button>
       </div>
@@ -785,18 +827,15 @@ function renderRecords() {
   document.getElementById('recordCount').textContent = `(${filtered.length} รายการ)`;
 
   if (filtered.length === 0) {
-  const emptyIcon = currentFilter === 'GOLD'
-    ? `<img src="https://cdn-icons-png.flaticon.com/512/5699/5699560.png" style="width:40px;height:40px;opacity:0.4;">`
-    : currentFilter === 'BTC'
-    ? `<img src="https://cdn-icons-png.flaticon.com/512/5968/5968260.png" style="width:40px;height:40px;opacity:0.4;">`
-    : '📋';
-  document.getElementById('recordsBody').innerHTML = `
-    <tr><td colspan="10">
-      <div class="empty-state">
-        <div class="icon">${emptyIcon}</div>
-        <p>ยังไม่มีรายการ</p>
-      </div>
-    </td></tr>`;
+    const cfg = ASSET_CONFIG[currentFilter];
+    const emptyIcon = cfg ? `<span style="font-size:40px;opacity:0.4;">${cfg.icon}</span>` : '📋';
+    document.getElementById('recordsBody').innerHTML = `
+      <tr><td colspan="10">
+        <div class="empty-state">
+          <div class="icon">${emptyIcon}</div>
+          <p>ยังไม่มีรายการ</p>
+        </div>
+      </td></tr>`;
     return;
   }
 
@@ -806,13 +845,11 @@ function renderRecords() {
 
   const rows = filtered.map(r => {
     const rid = r.id; // UUID ไม่มี quote ปัญหา
-    const assetClass = r.asset_type === 'GOLD' ? 'asset-gold' : r.asset_type === 'BTC' ? 'asset-btc' : 'asset-other';
-    const assetIcon = r.asset_type === 'GOLD'
-      ? `<img src="https://cdn-icons-png.flaticon.com/512/5699/5699560.png" style="width:14px;height:14px;vertical-align:middle;">`
-      : r.asset_type === 'BTC'
-      ? `<img src="https://cdn-icons-png.flaticon.com/512/5968/5968260.png" style="width:14px;height:14px;vertical-align:middle;">`
-      : '🪙';
-    const assetName = r.asset_type === 'GOLD' ? 'GOLD' : r.asset_type === 'BTC' ? 'BTC' : (r.custom_asset || 'OTHER');
+    const assetName = r.asset_type === 'OTHER' ? (r.custom_asset || 'อื่นๆ') : (ASSET_CONFIG[r.asset_type]?.label || r.asset_type);
+    const cfg       = ASSET_CONFIG[r.asset_type] || ASSET_CONFIG.OTHER;
+    const assetClass = cfg.badge;
+    const assetIcon  = cfg.icon;
+    const unitLabel  = cfg.unit[1];
 
     // Current value calc
     let currentVal = null;
@@ -847,7 +884,6 @@ function renderRecords() {
       : '—';
 
     const dateStr   = new Date(r.buy_date).toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
-    const unitLabel = r.asset_type === 'GOLD' ? 'g' : r.asset_type === 'BTC' ? 'BTC' : '';
     const qtyStr    = r.quantity ? `${parseFloat(r.quantity).toPrecision(6)} ${unitLabel}` : '—';
 
     // คำนวณ PnL จาก realPaid (รองรับกรณี USDT บันทึกเป็น 0)
@@ -930,15 +966,11 @@ function renderCards(filtered) {
 
   container.innerHTML = filtered.map(r => {
     const rid = r.id;
-    const assetClass = r.asset_type === 'GOLD' ? 'asset-gold' : r.asset_type === 'BTC' ? 'asset-btc' : 'asset-other';
-    const assetIcon  = r.asset_type === 'GOLD'
-      ? `<img src="https://cdn-icons-png.flaticon.com/512/5699/5699560.png" style="width:14px;height:14px;vertical-align:middle;">`
-      : r.asset_type === 'BTC'
-      ? `<img src="https://cdn-icons-png.flaticon.com/512/5968/5968260.png" style="width:14px;height:14px;vertical-align:middle;">`
-      : '🪙';
-    const assetName = r.asset_type === 'GOLD' ? 'GOLD' : r.asset_type === 'BTC' ? 'BTC' : (r.custom_asset || 'OTHER');
-    const dateStr   = new Date(r.buy_date).toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
-    const unitLabel = r.asset_type === 'GOLD' ? 'g' : r.asset_type === 'BTC' ? 'BTC' : '';
+    const cfg       = ASSET_CONFIG[r.asset_type] || ASSET_CONFIG.OTHER;
+    const assetClass = cfg.badge;
+    const assetIcon  = cfg.icon;
+    const assetName  = r.asset_type === 'OTHER' ? (r.custom_asset || 'อื่นๆ') : cfg.label;
+    const unitLabel  = cfg.unit[1];
     const qtyStr    = r.quantity ? `${parseFloat(r.quantity).toPrecision(5)} ${unitLabel}` : '—';
 
     // Current value & PnL
@@ -1084,7 +1116,8 @@ function openEditModal(id) {
   editingId = id;
   document.getElementById('modalTitle').textContent = '✏️ แก้ไขรายการ';
 
-  selectAsset(r.asset_type, document.getElementById('opt' + (r.asset_type === 'OTHER' ? 'Other' : r.asset_type)));
+  const assetBtnId = 'opt' + r.asset_type;
+  selectAsset(r.asset_type, document.getElementById(assetBtnId) || document.getElementById('optOTHER'));
   if (r.asset_type === 'OTHER') document.getElementById('customAsset').value = r.custom_asset || '';
   document.getElementById('buyDate').value       = r.buy_date;
   document.getElementById('refNo').value         = r.ref_no || '';
@@ -1129,31 +1162,51 @@ function clearForm() {
   const rateInput = document.getElementById('usdtRate');
   if (rateInput) rateInput.value = '';
   if (document.getElementById('rateAutoHint')) document.getElementById('rateAutoHint').textContent = '';
-  selectAsset('GOLD', document.getElementById('optGold'));
+  selectAsset('GOLD', document.getElementById('optGOLD'));
   document.getElementById('pricePreview').classList.remove('show');
   _qtyManual = false;
   removeSlip();
 }
 
-// ===== ASSET SELECTOR =====
+// ===== ASSET CONFIG =====
+const ASSET_CONFIG = {
+  GOLD:     { label:'ทองคำ',       icon:`<img src="https://cdn-icons-png.flaticon.com/512/5699/5699560.png" style="width:14px;height:14px;vertical-align:middle;">`, badge:'asset-gold',   unit:['บาท/กรัม','กรัม'],    priceKey:'gold' },
+  SILVER:   { label:'เงิน (Silver)',icon:'🥈',                                                                                                                        badge:'asset-silver', unit:['บาท/กรัม','กรัม'],    priceKey:null },
+  BTC:      { label:'Bitcoin',      icon:`<img src="https://cdn-icons-png.flaticon.com/512/5968/5968260.png" style="width:14px;height:14px;vertical-align:middle;">`, badge:'asset-btc',    unit:['USDT/BTC','BTC'],      priceKey:'btc' },
+  SET:      { label:'หุ้นไทย (SET)',icon:'📈',                                                                                                                        badge:'asset-stock',  unit:['บาท/หุ้น','หุ้น'],    priceKey:null },
+  USSTOCK:  { label:'หุ้น US',      icon:'🇺🇸',                                                                                                                       badge:'asset-ustock', unit:['USD/หุ้น','หุ้น'],     priceKey:null },
+  FUND:     { label:'กองทุน',       icon:'💼',                                                                                                                        badge:'asset-fund',   unit:['บาท/หน่วย','หน่วย'], priceKey:null },
+  BOND:     { label:'พันธบัตร',     icon:'📜',                                                                                                                        badge:'asset-bond',   unit:['บาท/หน่วย','หน่วย'], priceKey:null },
+  PROPERTY: { label:'อสังหาฯ',      icon:'🏠',                                                                                                                        badge:'asset-prop',   unit:['บาท','ชิ้น'],         priceKey:null },
+  OTHER:    { label:'อื่นๆ',        icon:'🪙',                                                                                                                        badge:'asset-other',  unit:['บาท/หน่วย','หน่วย'], priceKey:null },
+};
+
+function getAssetBadge(type, customName) {
+  const cfg = ASSET_CONFIG[type] || ASSET_CONFIG.OTHER;
+  const name = type === 'OTHER' ? (customName || 'อื่นๆ') : cfg.label;
+  return `<span class="asset-badge ${cfg.badge}">${cfg.icon} ${name}</span>`;
+}
+
 function selectAsset(type, btn) {
   selectedAsset = type;
-  ['optGold','optBTC','optOther'].forEach(id => {
-    document.getElementById(id).className = 'asset-opt';
-  });
-  const classMap = { GOLD:'selected-gold', BTC:'selected-btc', OTHER:'selected-other' };
-  if (btn) btn.className = 'asset-opt ' + classMap[type];
+  const cfg = ASSET_CONFIG[type] || ASSET_CONFIG.OTHER;
 
-  const unitMap = { GOLD:['บาท/กรัม','กรัม'], BTC:['USDT','BTC'], OTHER:['บาท/หน่วย','หน่วย'] };
-  const [priceUnit, qtyUnit] = unitMap[type];
-  document.getElementById('unitLabel').textContent = priceUnit;
-  document.getElementById('qtyLabel').textContent = qtyUnit;
+  // Reset all buttons
+  Object.keys(ASSET_CONFIG).forEach(k => {
+    const el = document.getElementById('opt' + k);
+    if (el) el.className = 'asset-opt';
+  });
+  if (btn) btn.className = `asset-opt selected-${cfg.badge.replace('asset-','')}`;
+
+  document.getElementById('unitLabel').textContent = cfg.unit[0];
+  document.getElementById('qtyLabel').textContent  = cfg.unit[1];
   document.getElementById('customAssetRow').style.display = type === 'OTHER' ? 'block' : 'none';
 
-  // Auto-fill current market price
-  if (type === 'GOLD' && prices.gold) document.getElementById('pricePerUnit').value = prices.gold.thb;
-  else if (type === 'BTC' && prices.btc) document.getElementById('pricePerUnit').value = prices.btc.thb;
-  else document.getElementById('pricePerUnit').value = '';
+  // Auto-fill price
+  const priceEl = document.getElementById('pricePerUnit');
+  if (type === 'GOLD' && prices.gold)    priceEl.value = prices.gold.thb;
+  else if (type === 'BTC' && prices.btc) priceEl.value = prices.btc.thb;
+  else priceEl.value = '';
 
   calcPreview();
 }
