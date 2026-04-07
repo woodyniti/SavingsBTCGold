@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
 <title>Saving is the mother of everything</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -798,7 +800,12 @@ function renderRecords() {
     return;
   }
 
+  // เก็บ index map สำหรับ onclick
+  window._recordMap = {};
+  filtered.forEach(r => { window._recordMap[r.id] = r; });
+
   const rows = filtered.map(r => {
+    const rid = r.id; // UUID ไม่มี quote ปัญหา
     const assetClass = r.asset_type === 'GOLD' ? 'asset-gold' : r.asset_type === 'BTC' ? 'asset-btc' : 'asset-other';
     const assetIcon = r.asset_type === 'GOLD'
       ? `<img src="https://cdn-icons-png.flaticon.com/512/5699/5699560.png" style="width:14px;height:14px;vertical-align:middle;">`
@@ -857,21 +864,19 @@ function renderRecords() {
     return `<tr>
       <td style="white-space:nowrap;">
         <div style="display:flex;gap:5px;align-items:center;">
-          <button onclick="openEditModal(${JSON.stringify(r.id)})"
+          <button onclick="openEditModal('${rid}')"
             style="padding:7px 13px;border-radius:8px;border:1.5px solid var(--gold-border);
             background:var(--gold-bg);color:var(--gold);font-size:13px;font-weight:700;
-            cursor:pointer;font-family:'Noto Sans Thai',sans-serif;white-space:nowrap;
-            display:flex;align-items:center;gap:4px;">
+            cursor:pointer;font-family:'Noto Sans Thai',sans-serif;white-space:nowrap;">
             ✏️ แก้ไข
           </button>
-          <button onclick="deleteRecord(${JSON.stringify(r.id)})"
+          <button onclick="deleteRecord('${rid}')"
             style="padding:7px 13px;border-radius:8px;border:1.5px solid var(--error-border);
             background:var(--error-bg);color:var(--error);font-size:13px;font-weight:700;
-            cursor:pointer;font-family:'Noto Sans Thai',sans-serif;white-space:nowrap;
-            display:flex;align-items:center;gap:4px;">
+            cursor:pointer;font-family:'Noto Sans Thai',sans-serif;white-space:nowrap;">
             🗑️ ลบ
           </button>
-          ${r.slip_image ? `<button onclick="viewSlip(${JSON.stringify(r.id)})"
+          ${r.slip_image ? `<button onclick="viewSlip('${rid}')"
             style="padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);
             background:var(--surface2);cursor:pointer;font-size:15px;">🧾</button>` : ''}
         </div>
@@ -924,6 +929,7 @@ function renderCards(filtered) {
   }
 
   container.innerHTML = filtered.map(r => {
+    const rid = r.id;
     const assetClass = r.asset_type === 'GOLD' ? 'asset-gold' : r.asset_type === 'BTC' ? 'asset-btc' : 'asset-other';
     const assetIcon  = r.asset_type === 'GOLD'
       ? `<img src="https://cdn-icons-png.flaticon.com/512/5699/5699560.png" style="width:14px;height:14px;vertical-align:middle;">`
@@ -966,13 +972,13 @@ function renderCards(filtered) {
           <span style="font-size:12px;color:var(--text-dim);">${dateStr}</span>
         </div>
         <div class="record-card-actions">
-          ${r.slip_image ? `<button onclick="viewSlip(${JSON.stringify(r.id)})"
+          ${r.slip_image ? `<button onclick="viewSlip('${rid}')"
             style="padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;font-size:15px;">🧾</button>` : ''}
-          <button onclick="openEditModal(${JSON.stringify(r.id)})"
+          <button onclick="openEditModal('${rid}')"
             style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--gold-border);
             background:var(--gold-bg);color:var(--gold);font-size:13px;font-weight:700;
             cursor:pointer;font-family:'Noto Sans Thai',sans-serif;">✏️ แก้ไข</button>
-          <button onclick="deleteRecord(${JSON.stringify(r.id)})"
+          <button onclick="deleteRecord('${rid}')"
             style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--error-border);
             background:var(--error-bg);color:var(--error);font-size:13px;font-weight:700;
             cursor:pointer;font-family:'Noto Sans Thai',sans-serif;">🗑️ ลบ</button>
@@ -1071,8 +1077,10 @@ function openAddModal() {
 }
 
 function openEditModal(id) {
+  console.log('📝 openEditModal called, id:', id);
   const r = records.find(x => x.id === id);
-  if (!r) return;
+  console.log('📝 record found:', r);
+  if (!r) { console.error('❌ Record not found!'); return; }
   editingId = id;
   document.getElementById('modalTitle').textContent = '✏️ แก้ไขรายการ';
 
@@ -1516,7 +1524,9 @@ function viewSlip(id) {
 }
 
 async function deleteRecord(id) {
+  console.log('🗑️ deleteRecord called, id:', id);
   const r = records.find(x => x.id === id);
+  console.log('🗑️ record found:', r);
   if (!r) return;
 
   // Custom confirm dialog
