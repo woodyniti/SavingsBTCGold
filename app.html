@@ -521,36 +521,6 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
         </div>
       </div>
 
-      <!-- BOT Rate Popup Modal -->
-      <div id="ratePopupOverlay" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;">
-        <div style="background:#fff;border-radius:16px;width:100%;max-width:700px;height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.2);">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1.5px solid var(--border);flex-shrink:0;">
-            <div>
-              <div style="font-size:16px;font-weight:700;color:var(--text);" id="ratePopupTitle">อัตราแลกเปลี่ยน</div>
-              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">กรอกอัตราที่ต้องการใช้ แล้วกด "ใช้อัตรานี้"</div>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <div style="display:flex;align-items:center;gap:6px;background:var(--gold-bg);border:1.5px solid var(--gold-border);border-radius:8px;padding:6px 10px;">
-                <span style="font-size:12px;color:var(--text-muted);">USD/THB:</span>
-                <input type="number" id="ratePopupInput" placeholder="34.50" min="1" step="0.01"
-                  style="width:80px;border:none;background:transparent;font-family:'IBM Plex Mono',monospace;
-                  font-size:15px;font-weight:700;color:var(--gold);outline:none;text-align:right;">
-              </div>
-              <button onclick="applyRateFromPopup()"
-                style="padding:8px 16px;background:var(--gold);border:none;border-radius:8px;
-                color:#fff;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;">
-                ใช้อัตรานี้ ✓
-              </button>
-              <button onclick="closeRatePopup()"
-                style="padding:8px 10px;background:var(--surface2);border:1.5px solid var(--border);
-                border-radius:8px;color:var(--text-muted);font-size:14px;cursor:pointer;">✕</button>
-            </div>
-          </div>
-          <iframe id="ratePopupFrame" src="" style="flex:1;border:none;width:100%;display:none;"></iframe>
-          <div id="ratePopupHelper" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;overflow-y:auto;"></div>
-        </div>
-      </div>
-
       <div class="form-row">
         <div class="form-group">
           <label>ราคาต่อหน่วย (<span id="unitLabel">บาท/กรัม</span>)</label>
@@ -621,6 +591,36 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
       <button class="btn-full btn-cancel" onclick="closeModal()">ยกเลิก</button>
       <button class="btn-full btn-primary" onclick="saveRecord()" id="saveBtn">บันทึก</button>
     </div>
+  </div>
+</div>
+
+<!-- RATE POPUP (ต้องอยู่นอก modal-overlay) -->
+<div id="ratePopupOverlay" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:700px;height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.2);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1.5px solid var(--border);flex-shrink:0;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:var(--text);" id="ratePopupTitle">อัตราแลกเปลี่ยน</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">กรอกอัตราที่ต้องการใช้ แล้วกด "ใช้อัตรานี้"</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:6px;background:var(--gold-bg);border:1.5px solid var(--gold-border);border-radius:8px;padding:6px 10px;">
+          <span style="font-size:12px;color:var(--text-muted);">USD/THB:</span>
+          <input type="number" id="ratePopupInput" placeholder="34.50" min="1" step="0.01"
+            style="width:80px;border:none;background:transparent;font-family:'IBM Plex Mono',monospace;
+            font-size:15px;font-weight:700;color:var(--gold);outline:none;text-align:right;">
+        </div>
+        <button onclick="applyRateFromPopup()"
+          style="padding:8px 16px;background:var(--gold);border:none;border-radius:8px;
+          color:#fff;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;">
+          ใช้อัตรานี้ ✓
+        </button>
+        <button onclick="closeRatePopup()"
+          style="padding:8px 10px;background:var(--surface2);border:1.5px solid var(--border);
+          border-radius:8px;color:var(--text-muted);font-size:14px;cursor:pointer;">✕</button>
+      </div>
+    </div>
+    <iframe id="ratePopupFrame" src="" style="flex:1;border:none;width:100%;display:none;"></iframe>
+    <div id="ratePopupHelper" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;overflow-y:auto;"></div>
   </div>
 </div>
 
