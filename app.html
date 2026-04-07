@@ -493,11 +493,11 @@ body { font-family:'Noto Sans Thai',sans-serif; background:var(--bg); color:var(
         </button>
       </div>
 
-      <!-- Asset name (for OTHER) -->
+      <!-- Asset name (for types that need custom name) -->
       <div class="form-row single" id="customAssetRow" style="display:none">
         <div class="form-group">
-          <label>ชื่อสินทรัพย์</label>
-          <input type="text" id="customAsset" placeholder="เช่น ETH, Silver, XRP">
+          <label id="customAssetLabel">ชื่อสินทรัพย์</label>
+          <input type="text" id="customAsset" placeholder="เช่น AAPL, MSFT, NVDA">
         </div>
       </div>
 
@@ -845,11 +845,13 @@ function renderRecords() {
 
   const rows = filtered.map(r => {
     const rid = r.id; // UUID ไม่มี quote ปัญหา
-    const assetName = r.asset_type === 'OTHER' ? (r.custom_asset || 'อื่นๆ') : (ASSET_CONFIG[r.asset_type]?.label || r.asset_type);
-    const cfg       = ASSET_CONFIG[r.asset_type] || ASSET_CONFIG.OTHER;
+    const cfg        = ASSET_CONFIG[r.asset_type] || ASSET_CONFIG.OTHER;
     const assetClass = cfg.badge;
     const assetIcon  = cfg.icon;
     const unitLabel  = cfg.unit[1];
+    const assetName  = cfg.needsName && r.custom_asset
+      ? `${cfg.label} · ${r.custom_asset}`
+      : cfg.label;
 
     // Current value calc
     let currentVal = null;
@@ -966,11 +968,13 @@ function renderCards(filtered) {
 
   container.innerHTML = filtered.map(r => {
     const rid = r.id;
-    const cfg       = ASSET_CONFIG[r.asset_type] || ASSET_CONFIG.OTHER;
+    const cfg        = ASSET_CONFIG[r.asset_type] || ASSET_CONFIG.OTHER;
     const assetClass = cfg.badge;
     const assetIcon  = cfg.icon;
-    const assetName  = r.asset_type === 'OTHER' ? (r.custom_asset || 'อื่นๆ') : cfg.label;
     const unitLabel  = cfg.unit[1];
+    const assetName  = cfg.needsName && r.custom_asset
+      ? `${cfg.label} · ${r.custom_asset}`
+      : cfg.label;
     const qtyStr    = r.quantity ? `${parseFloat(r.quantity).toPrecision(5)} ${unitLabel}` : '—';
 
     // Current value & PnL
@@ -1118,7 +1122,8 @@ function openEditModal(id) {
 
   const assetBtnId = 'opt' + r.asset_type;
   selectAsset(r.asset_type, document.getElementById(assetBtnId) || document.getElementById('optOTHER'));
-  if (r.asset_type === 'OTHER') document.getElementById('customAsset').value = r.custom_asset || '';
+  const cfg = ASSET_CONFIG[r.asset_type] || ASSET_CONFIG.OTHER;
+  if (cfg.needsName) document.getElementById('customAsset').value = r.custom_asset || '';
   document.getElementById('buyDate').value       = r.buy_date;
   document.getElementById('refNo').value         = r.ref_no || '';
   document.getElementById('currency').value      = 'THB'; // edit ใช้ THB เสมอ (บันทึกเป็นบาทแล้ว)
@@ -1170,15 +1175,15 @@ function clearForm() {
 
 // ===== ASSET CONFIG =====
 const ASSET_CONFIG = {
-  GOLD:     { label:'ทองคำ',       icon:`<img src="https://cdn-icons-png.flaticon.com/512/5699/5699560.png" style="width:14px;height:14px;vertical-align:middle;">`, badge:'asset-gold',   unit:['บาท/กรัม','กรัม'],    priceKey:'gold' },
-  SILVER:   { label:'เงิน (Silver)',icon:'🥈',                                                                                                                        badge:'asset-silver', unit:['บาท/กรัม','กรัม'],    priceKey:null },
-  BTC:      { label:'Bitcoin',      icon:`<img src="https://cdn-icons-png.flaticon.com/512/5968/5968260.png" style="width:14px;height:14px;vertical-align:middle;">`, badge:'asset-btc',    unit:['USDT/BTC','BTC'],      priceKey:'btc' },
-  SET:      { label:'หุ้นไทย (SET)',icon:'📈',                                                                                                                        badge:'asset-stock',  unit:['บาท/หุ้น','หุ้น'],    priceKey:null },
-  USSTOCK:  { label:'หุ้น US',      icon:'🇺🇸',                                                                                                                       badge:'asset-ustock', unit:['USD/หุ้น','หุ้น'],     priceKey:null },
-  FUND:     { label:'กองทุน',       icon:'💼',                                                                                                                        badge:'asset-fund',   unit:['บาท/หน่วย','หน่วย'], priceKey:null },
-  BOND:     { label:'พันธบัตร',     icon:'📜',                                                                                                                        badge:'asset-bond',   unit:['บาท/หน่วย','หน่วย'], priceKey:null },
-  PROPERTY: { label:'อสังหาฯ',      icon:'🏠',                                                                                                                        badge:'asset-prop',   unit:['บาท','ชิ้น'],         priceKey:null },
-  OTHER:    { label:'อื่นๆ',        icon:'🪙',                                                                                                                        badge:'asset-other',  unit:['บาท/หน่วย','หน่วย'], priceKey:null },
+  GOLD:     { label:'ทองคำ',        icon:`<img src="https://cdn-icons-png.flaticon.com/512/5699/5699560.png" style="width:14px;height:14px;vertical-align:middle;">`, badge:'asset-gold',   unit:['บาท/กรัม','กรัม'],    needsName:false },
+  SILVER:   { label:'เงิน (Silver)', icon:'🥈',                                                                                                                        badge:'asset-silver', unit:['บาท/กรัม','กรัม'],    needsName:false },
+  BTC:      { label:'Bitcoin',       icon:`<img src="https://cdn-icons-png.flaticon.com/512/5968/5968260.png" style="width:14px;height:14px;vertical-align:middle;">`, badge:'asset-btc',    unit:['USDT/BTC','BTC'],      needsName:false },
+  SET:      { label:'หุ้นไทย',       icon:'📈',                                                                                                                        badge:'asset-stock',  unit:['บาท/หุ้น','หุ้น'],    needsName:true,  namePlaceholder:'ชื่อหุ้น เช่น PTT, KBANK, AOT',   nameLabel:'ชื่อหุ้น (Ticker)' },
+  USSTOCK:  { label:'หุ้น US',       icon:'🇺🇸',                                                                                                                       badge:'asset-ustock', unit:['USD/หุ้น','หุ้น'],     needsName:true,  namePlaceholder:'Ticker เช่น AAPL, MSFT, NVDA',     nameLabel:'ชื่อหุ้น (Ticker)' },
+  FUND:     { label:'กองทุน',        icon:'💼',                                                                                                                        badge:'asset-fund',   unit:['บาท/หน่วย','หน่วย'],  needsName:true,  namePlaceholder:'เช่น SSF, RMF, K-PLAN3',           nameLabel:'ชื่อกองทุน' },
+  BOND:     { label:'พันธบัตร',      icon:'📜',                                                                                                                        badge:'asset-bond',   unit:['บาท/หน่วย','หน่วย'],  needsName:true,  namePlaceholder:'เช่น พันธบัตรออมทรัพย์ รุ่น 1/67',  nameLabel:'รุ่น/ชื่อพันธบัตร' },
+  PROPERTY: { label:'อสังหาฯ',       icon:'🏠',                                                                                                                        badge:'asset-prop',   unit:['บาท','ชิ้น'],          needsName:true,  namePlaceholder:'เช่น คอนโด ลุมพินี, บ้าน รังสิต',  nameLabel:'ชื่อ/ที่ตั้ง' },
+  OTHER:    { label:'อื่นๆ',         icon:'🪙',                                                                                                                        badge:'asset-other',  unit:['บาท/หน่วย','หน่วย'],  needsName:true,  namePlaceholder:'เช่น ETH, XRP, เพชร',              nameLabel:'ชื่อสินทรัพย์' },
 };
 
 function getAssetBadge(type, customName) {
@@ -1200,7 +1205,13 @@ function selectAsset(type, btn) {
 
   document.getElementById('unitLabel').textContent = cfg.unit[0];
   document.getElementById('qtyLabel').textContent  = cfg.unit[1];
-  document.getElementById('customAssetRow').style.display = type === 'OTHER' ? 'block' : 'none';
+
+  const needsName = cfg.needsName;
+  document.getElementById('customAssetRow').style.display = needsName ? 'block' : 'none';
+  if (needsName) {
+    document.getElementById('customAssetLabel').textContent  = cfg.nameLabel || 'ชื่อสินทรัพย์';
+    document.getElementById('customAsset').placeholder       = cfg.namePlaceholder || '';
+  }
 
   // Auto-fill price
   const priceEl = document.getElementById('pricePerUnit');
@@ -1325,7 +1336,7 @@ async function saveRecord() {
   const payload = {
     user_id: currentUser.id,
     asset_type: selectedAsset,
-    custom_asset: selectedAsset === 'OTHER' ? document.getElementById('customAsset').value : null,
+    custom_asset: (ASSET_CONFIG[selectedAsset]?.needsName) ? document.getElementById('customAsset').value.trim() : null,
     buy_date: document.getElementById('buyDate').value || new Date().toISOString().split('T')[0],
     ref_no: document.getElementById('refNo').value || null,
     amount_paid: paid, // บันทึกเป็นบาทเสมอ
