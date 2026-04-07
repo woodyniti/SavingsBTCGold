@@ -857,50 +857,58 @@ function renderRecords() {
       : cfg.label;
 
     // Current value calc
-    let currentVal = null;
+    let currentVal    = null;
+    let currentValUsd = null;
+    let costBasisUsd  = null;
     let pnlHtml = '<span class="pnl-zero">—</span>';
-    if (r.asset_type === 'GOLD' && prices.gold && r.quantity) {
+
+    if (r.asset_type === 'GOLD' && prices.gold?.thb && r.quantity) {
       currentVal = r.quantity * prices.gold.thb;
-    } else if (r.asset_type === 'BTC' && prices.btc && r.quantity) {
-      currentVal = r.quantity * prices.btc.thb;
+    } else if (r.asset_type === 'BTC' && prices.btc?.thb && r.quantity) {
+      currentVal    = r.quantity * prices.btc.thb;
+      currentValUsd = r.quantity * prices.btc.usd;
+      if (r.price_per_unit) costBasisUsd = r.quantity * r.price_per_unit;
     }
-    if (currentVal !== null) {
-      const pnl = currentVal - r.amount_paid;
-      const pnlPct = ((pnl / r.amount_paid) * 100).toFixed(2);
-      const cls = pnl >= 0 ? 'pnl-pos' : 'pnl-neg';
-      const sign = pnl >= 0 ? '+' : '';
-      pnlHtml = `<span class="${cls}">${sign}${Math.round(pnl).toLocaleString()} ฿<br><small>${sign}${pnlPct}%</small></span>`;
+
+    // คำนวณ PnL จาก realPaid
+    const usdtMatch = (r.notes || '').match(/\[จ่าย ([\d.]+) USDT @ ([\d.]+) ฿ = ([\d,]+) ฿\]/);
+    const realPaid  = r.amount_paid > 0 ? r.amount_paid
+      : usdtMatch ? parseFloat(usdtMatch[3].replace(/,/g,'')) : 0;
+
+    if (currentVal !== null && realPaid > 0) {
+      const pnlThb = currentVal - realPaid;
+      const pnlPct = ((pnlThb / realPaid) * 100).toFixed(2);
+      const cls    = pnlThb >= 0 ? 'pnl-pos' : 'pnl-neg';
+      const sign   = pnlThb >= 0 ? '+' : '';
+
+      if (r.asset_type === 'BTC' && costBasisUsd && currentValUsd) {
+        const pnlUsd  = currentValUsd - costBasisUsd;
+        const signUsd = pnlUsd >= 0 ? '+' : '';
+        const clsUsd  = pnlUsd >= 0 ? 'pnl-pos' : 'pnl-neg';
+        pnlHtml = `
+          <div><span class="${cls}" style="font-size:13px;font-weight:700;">${sign}${Math.round(pnlThb).toLocaleString()} ฿</span></div>
+          <div><span class="${clsUsd}" style="font-size:11px;">${signUsd}$${Math.abs(pnlUsd).toFixed(2)} USD</span></div>
+          <div style="font-size:11px;color:var(--text-dim);">${sign}${pnlPct}%</div>`;
+      } else {
+        pnlHtml = `<span class="${cls}">${sign}${Math.round(pnlThb).toLocaleString()} ฿<br><small>${sign}${pnlPct}%</small></span>`;
+      }
     }
 
     const currentValHtml = currentVal !== null
-      ? `<span class="mono">${Math.round(currentVal).toLocaleString()} ฿</span>`
+      ? `<div class="mono" style="font-size:13px;">${Math.round(currentVal).toLocaleString()} ฿</div>
+         ${currentValUsd ? `<div style="font-size:11px;color:var(--text-dim);">$${Math.round(currentValUsd).toLocaleString()}</div>` : ''}`
       : '<span style="color:var(--text-dim)">N/A</span>';
 
-    // แสดงต้นทุน — ถ้า amount_paid = 0 แสดง note แทน
-    const usdtMatch = (r.notes || '').match(/\[จ่าย ([\d.]+) USDT @ ([\d.]+) ฿ = ([\d,]+) ฿\]/);
     const costDisplay = r.amount_paid > 0
-      ? `<span class="mono">${r.amount_paid.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2})} ฿</span>`
+      ? `<div class="mono" style="font-size:13px;">${r.amount_paid.toLocaleString('th-TH', {minimumFractionDigits:2})} ฿</div>
+         ${usdtMatch ? `<div style="font-size:11px;color:var(--text-dim);">${usdtMatch[1]} USDT</div>` : ''}`
       : usdtMatch
-        ? `<span class="mono" style="color:var(--btc)" title="จ่าย ${usdtMatch[1]} USDT @ ${usdtMatch[2]} ฿">${usdtMatch[1]} USDT<br><small style="color:var(--text-dim)">(${usdtMatch[3]} ฿)</small></span>`
-        : `<span style="color:var(--error);font-size:12px;">บันทึกผิดพลาด</span>`;
+        ? `<span class="mono" style="color:var(--btc);font-size:13px;">${usdtMatch[1]} USDT<br><small style="color:var(--text-dim)">(${usdtMatch[3]} ฿)</small></span>`
+        : `<span style="color:var(--error);font-size:12px;">ไม่มีข้อมูล</span>`;
 
-    const noteDisplay = r.notes
-      ? r.notes.replace(/\[จ่าย.*?\] ?/, '').trim() || '—'
-      : '—';
-
-    const dateStr   = new Date(r.buy_date).toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
-    const qtyStr    = r.quantity ? `${parseFloat(r.quantity).toPrecision(6)} ${unitLabel}` : '—';
-
-    // คำนวณ PnL จาก realPaid (รองรับกรณี USDT บันทึกเป็น 0)
-    const realPaid = r.amount_paid > 0 ? r.amount_paid
-      : usdtMatch ? parseFloat(usdtMatch[3].replace(/,/g,'')) : 0;
-    if (currentVal !== null && realPaid > 0) {
-      const pnl    = currentVal - realPaid;
-      const pnlPct = ((pnl / realPaid) * 100).toFixed(2);
-      const cls    = pnl >= 0 ? 'pnl-pos' : 'pnl-neg';
-      const sign   = pnl >= 0 ? '+' : '';
-      pnlHtml = `<span class="${cls}">${sign}${Math.round(pnl).toLocaleString()} ฿<br><small>${sign}${pnlPct}%</small></span>`;
-    }
+    const noteDisplay = r.notes ? r.notes.replace(/\[จ่าย.*?\] ?/, '').trim() || '—' : '—';
+    const dateStr     = new Date(r.buy_date).toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
+    const qtyStr      = r.quantity ? `${parseFloat(r.quantity).toPrecision(6)} ${unitLabel}` : '—';
 
     return `<tr>
       <td style="white-space:nowrap;">
